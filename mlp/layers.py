@@ -288,6 +288,15 @@ class Sigmoid(Linear):
         """
         return 1.0/(1.0 + numpy.exp(-value))
 
+    @staticmethod
+    def sigmoid_prime(value):
+        """
+        This applies the sigmoid prime function to a single value
+        :param value: the value to apply sigmoid prime to
+        :return: the sigmoid output value
+        """
+        return Sigmoid.sigmoid(value)*(1.0-Sigmoid.sigmoid(value))
+
     def fprop(self, inputs):
         layer_outputs = numpy.dot(inputs, self.W) + self.b
         vector_sigmoid = numpy.vectorize(self.sigmoid, otypes=[numpy.float])
