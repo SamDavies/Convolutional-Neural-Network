@@ -288,8 +288,7 @@ class Sigmoid(Linear):
         """
         return 1.0/(1.0 + numpy.exp(-value))
 
-    # def fprop(self, inputs):
-    #     layer_outputs = numpy.dot(inputs, self.W) + self.b
-    #     for output in layer_outputs:
-    #
-    #     return
+    def fprop(self, inputs):
+        layer_outputs = numpy.dot(inputs, self.W) + self.b
+        vector_sigmoid = numpy.vectorize(self.sigmoid, otypes=[numpy.float])
+        return vector_sigmoid(layer_outputs)
