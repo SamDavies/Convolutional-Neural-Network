@@ -40,3 +40,18 @@ class SigmoidTestCase(TestCase):
 
         # Then
         assert_array_almost_equal(forward, expected, decimal=3)
+
+    def test_sigmoid_prime_large_positive(self):
+        """ Ensure that a large positive value gives the correct sigmoid prime value """
+        actual = Sigmoid.sigmoid_prime(20.0)
+        self.assertAlmostEqual(0.0, actual)
+
+    def test_sigmoid_prime_large_negative(self):
+        """ Ensure that a large negative value gives the correct sigmoid prime value """
+        actual = Sigmoid.sigmoid_prime(-20.0)
+        self.assertAlmostEqual(0.0, actual)
+
+    def test_sigmoid_prime_zero(self):
+        """ Ensure that a zero value gives the correct sigmoid prime value """
+        actual = Sigmoid.sigmoid_prime(0.0)
+        self.assertAlmostEqual(0.25, actual)
