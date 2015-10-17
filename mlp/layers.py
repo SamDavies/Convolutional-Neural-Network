@@ -275,7 +275,21 @@ class Linear(Layer):
         return 'linear'
 
         
-        
-        
-        
-        
+class Sigmoid(Linear):
+    def get_name(self):
+        return 'sigmoid'
+
+    @staticmethod
+    def sigmoid(value):
+        """
+        This applies the sigmoid function to a single value
+        :param value: the value to apply sigmoid to
+        :return: the sigmoid output value
+        """
+        return 1.0/(1.0 + numpy.exp(-value))
+
+    # def fprop(self, inputs):
+    #     layer_outputs = numpy.dot(inputs, self.W) + self.b
+    #     for output in layer_outputs:
+    #
+    #     return
