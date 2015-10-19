@@ -81,3 +81,19 @@ class SoftmaxTestCase(TestCase):
         actual = Softmax.softmax(numpy.asarray([0.01, 0.01, 10.0]))
         expected = numpy.asarray([0.0, 0.0, 1.0])
         assert_array_almost_equal(expected, actual, decimal=3)
+
+    def test_softmax_forward_propagation(self):
+        """ Ensure that a softmax layer forwards propagates correctly """
+        # Given
+        rng = numpy.random.RandomState([2015, 10, 10])
+        rng_state = rng.get_state()
+        input_layer = numpy.asarray([-20.1, 52.4, 0, 0.05, 0.05, 49])
+        output_layer = numpy.asarray([-20.1, 52.4, 0, 0.05, 0.05, 49, 20, 20])
+        rng.set_state(rng_state)
+        softmax = Softmax(idim=input_layer.shape[0], odim=output_layer.shape[0], rng=rng)
+
+        # When
+        forward = softmax.fprop(input_layer)
+
+        # Then
+        self.assertEqual(forward.sum(), 1.0)
