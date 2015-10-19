@@ -301,3 +301,18 @@ class Sigmoid(Linear):
         layer_outputs = numpy.dot(inputs, self.W) + self.b
         vector_sigmoid = numpy.vectorize(self.sigmoid, otypes=[numpy.float])
         return vector_sigmoid(layer_outputs)
+
+    def bprop(self, h, igrads):
+        """
+
+        :param h: it's an activation produced in forward pass
+        :param igrads: current error
+        :return:
+        """
+        vector_sigmoid_prime = numpy.vectorize(self.sigmoid_prime, otypes=[numpy.float])
+
+        # deltas = igrads * dh^i/da^i
+        # ograds = deltas \times da^i/dx^i
+        deltas = igrads * vector_sigmoid_prime(h)
+        ograds = numpy.dot(deltas, self.W.T)
+        return deltas, ograds
