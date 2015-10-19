@@ -310,9 +310,27 @@ class Sigmoid(Linear):
         :return:
         """
         vector_sigmoid_prime = numpy.vectorize(self.sigmoid_prime, otypes=[numpy.float])
-
         # deltas = igrads * dh^i/da^i
         # ograds = deltas \times da^i/dx^i
         deltas = igrads * vector_sigmoid_prime(h)
         ograds = numpy.dot(deltas, self.W.T)
         return deltas, ograds
+
+
+class Softmax(Linear):
+    def get_name(self):
+        return 'softmax'
+
+    @staticmethod
+    def softmax(sum_outputs):
+        """
+        Given a vector of output units, normalize them using softmax
+        :param sum_outputs: the vector of standard summed output units e.g [1.0, 4.0, 12.6]
+        :return: a vector of normalized probability units
+        """
+        exp_sum = numpy.sum([numpy.exp(i) for i in sum_outputs])
+        return numpy.asarray([numpy.exp(i)/exp_sum for i in sum_outputs])
+
+    def fprop(self, inputs):
+        layer_outputs = numpy.dot(inputs, self.W) + self.b
+        return self.softmax(layer_outputs)
