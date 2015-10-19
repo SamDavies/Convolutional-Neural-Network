@@ -55,3 +55,21 @@ class SigmoidTestCase(TestCase):
         """ Ensure that a zero value gives the correct sigmoid prime value """
         actual = Sigmoid.sigmoid_prime(0.0)
         self.assertAlmostEqual(0.25, actual)
+
+    def test_sigmoid_backward_propagation(self):
+        """ Ensure that a sigmoid layer forwards propagates correctly """
+        # Given
+        rng = numpy.random.RandomState([2015, 10, 10])
+        rng_state = rng.get_state()
+        input_layer = numpy.asarray([-20.1, 52.4, 0, 0.05, 0.05, 49])
+        output_layer = numpy.asarray([-20.1, 52.4, 0, 0.05, 0.05, 49, 20, 20])
+        rng.set_state(rng_state)
+        sigmoid = Sigmoid(idim=input_layer.shape[0], odim=output_layer.shape[0], rng=rng)
+        forward = sigmoid.fprop(input_layer)
+
+        # When
+        deltas, ograds = sigmoid.bprop(h=forward, igrads=output_layer)
+        expected = numpy.asarray([1.518, -0.093, -0.703, 0.532, 1.96, 1.397])
+
+        # Then
+        assert_array_almost_equal(ograds, expected, decimal=3)
