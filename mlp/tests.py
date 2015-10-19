@@ -3,7 +3,7 @@ from unittest import TestCase
 import numpy
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from mlp.layers import Sigmoid
+from mlp.layers import Sigmoid, Softmax
 
 __author__ = 'Sam Davies'
 
@@ -73,3 +73,11 @@ class SigmoidTestCase(TestCase):
 
         # Then
         assert_array_almost_equal(ograds, expected, decimal=3)
+
+
+class SoftmaxTestCase(TestCase):
+    def test_softmax(self):
+        """ Ensure that a softmax gives the correct output """
+        actual = Softmax.softmax(numpy.asarray([0.01, 0.01, 10.0]))
+        expected = numpy.asarray([0.0, 0.0, 1.0])
+        assert_array_almost_equal(expected, actual, decimal=3)
