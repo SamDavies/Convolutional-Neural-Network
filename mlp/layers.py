@@ -304,7 +304,6 @@ class Sigmoid(Linear):
 
     def bprop(self, h, igrads):
         """
-
         :param h: it's an activation produced in forward pass
         :param igrads: current error
         :return:
@@ -334,3 +333,14 @@ class Softmax(Linear):
     def fprop(self, inputs):
         layer_outputs = numpy.dot(inputs, self.W) + self.b
         return self.softmax(layer_outputs)
+
+    def bprop(self, h, igrads):
+        raise NotImplementedError()
+
+    def bprop_cost(self, h, igrads, cost):
+        if cost is None or cost.get_name() == 'mse':
+            ograds = numpy.dot(igrads, self.W.T)
+            return igrads, ograds
+        else:
+            raise NotImplementedError('Softmax.bprop_cost method not implemented '
+                                      'for the %s cost' % cost.get_name())
