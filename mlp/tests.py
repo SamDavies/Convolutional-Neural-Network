@@ -44,17 +44,17 @@ class SigmoidTestCase(TestCase):
     def test_sigmoid_prime_large_positive(self):
         """ Ensure that a large positive value gives the correct sigmoid prime value """
         actual = Sigmoid.sigmoid_prime(20.0)
-        self.assertAlmostEqual(0.0, actual)
+        self.assertAlmostEqual(-380, actual)
 
     def test_sigmoid_prime_large_negative(self):
         """ Ensure that a large negative value gives the correct sigmoid prime value """
         actual = Sigmoid.sigmoid_prime(-20.0)
-        self.assertAlmostEqual(0.0, actual)
+        self.assertAlmostEqual(-420, actual)
 
     def test_sigmoid_prime_zero(self):
         """ Ensure that a zero value gives the correct sigmoid prime value """
         actual = Sigmoid.sigmoid_prime(0.0)
-        self.assertAlmostEqual(0.25, actual)
+        self.assertAlmostEqual(0.0, actual)
 
     def test_sigmoid_backward_propagation(self):
         """ Ensure that a sigmoid layer forwards propagates correctly """
@@ -69,7 +69,7 @@ class SigmoidTestCase(TestCase):
 
         # When
         deltas, ograds = sigmoid.bprop(h=forward, igrads=output_layer)
-        expected = numpy.asarray([1.518, -0.093, -0.703, 0.532, 1.96, 1.397])
+        expected = numpy.asarray([ 1.406,  0.078, -0.268,  0.418,  1.646,  0.831])
 
         # Then
         assert_array_almost_equal(ograds, expected, decimal=3)
@@ -80,6 +80,12 @@ class SoftmaxTestCase(TestCase):
         """ Ensure that a softmax gives the correct output """
         actual = Softmax.softmax(numpy.asarray([0.01, 0.01, 10.0]))
         expected = numpy.asarray([0.0, 0.0, 1.0])
+        assert_array_almost_equal(expected, actual, decimal=3)
+
+    def test_softmax_array(self):
+        """ Ensure that a softmax gives the correct output """
+        actual = Softmax.softmax(numpy.asarray([[0.0, 100.0], [100.0, 0.0]]))
+        expected = numpy.asarray([[0.0, 1.0], [1.0, 0.0]])
         assert_array_almost_equal(expected, actual, decimal=3)
 
     def test_softmax_forward_propagation(self):
