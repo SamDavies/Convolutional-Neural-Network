@@ -289,13 +289,13 @@ class Sigmoid(Linear):
         return 1.0/(1.0 + numpy.exp(-value))
 
     @staticmethod
-    def sigmoid_prime(value):
+    def sigmoid_prime(sigmoid):
         """
         This applies the sigmoid prime function to a single value
         :param value: the value to apply sigmoid prime to
         :return: the sigmoid output value
         """
-        return Sigmoid.sigmoid(value)*(1.0-Sigmoid.sigmoid(value))
+        return sigmoid*(1.0-sigmoid)
 
     def fprop(self, inputs):
         layer_outputs = numpy.dot(inputs, self.W) + self.b
@@ -323,10 +323,14 @@ class Softmax(Linear):
     @staticmethod
     def softmax(sum_outputs):
         """
-        Given a vector of output units, normalize them using softmax
-        :param sum_outputs: the vector of standard summed output units e.g [1.0, 4.0, 12.6]
+        Given a array of output units, normalize them using softmax. Each
+        :param sum_outputs: the array of row probs which add to 1
         :return: a vector of normalized probability units
         """
+        if sum_outputs.ndim > 1:
+            # apply software individually to each row
+            return numpy.asarray([Softmax.softmax(row) for row in sum_outputs])
+
         exp_sum = numpy.sum([numpy.exp(i) for i in sum_outputs])
         return numpy.asarray([numpy.exp(i)/exp_sum for i in sum_outputs])
 
@@ -338,9 +342,5 @@ class Softmax(Linear):
         raise NotImplementedError()
 
     def bprop_cost(self, h, igrads, cost):
-        if cost is None or cost.get_name() == 'mse':
-            ograds = numpy.dot(igrads, self.W.T)
-            return igrads, ograds
-        else:
-            raise NotImplementedError('Softmax.bprop_cost method not implemented '
-                                      'for the %s cost' % cost.get_name())
+        ograds = numpy.dot(igrads, self.W.T)
+        return igrads, ograds
