@@ -1,7 +1,7 @@
 import numpy
 
-# Seed a random number generator running the below cell, but do **not** modify the seed.
-rng = numpy.random.RandomState([2015, 10, 10])
+#Seed a random number generator running the below cell, but do **not** modify the seed.
+rng = numpy.random.RandomState([2015,10,10])
 rng_state = rng.get_state()
 
 import logging
@@ -18,7 +18,9 @@ logger.setLevel(logging.WARNING)
 
 learning_rates = [0.5, 0.2, 0.1, 0.05, 0.01, 0.005]
 
-for i, learning_rate in enumerate(learning_rates):
+test_errors = []
+
+for learning_rate in learning_rates:
     # define the model structure
     cost = CECost()
     model = MLP(cost=cost)
@@ -27,7 +29,7 @@ for i, learning_rate in enumerate(learning_rates):
     # one can stack more layers here
     # define the optimiser, here stochasitc gradient descent
     # with fixed learning rate and max_epochs as stopping criterion
-    lr_scheduler = LearningRateFixed(learning_rate=learning_rate, max_epochs=3)
+    lr_scheduler = LearningRateFixed(learning_rate=learning_rate, max_epochs=2)
     optimiser = SGDOptimiser(lr_scheduler=lr_scheduler)
 
     logger.warning('Initialising data providers...')
@@ -44,18 +46,27 @@ for i, learning_rate in enumerate(learning_rates):
 
     plt.subplot(2, 1, 1)
     train_errors = [train_stat[0] for train_stat in train_stats]
-    plt.plot(train_errors, label='Eta %s' % (str(i)))
+    plt.plot(train_errors, label='Eta %s' % (str(learning_rate)))
 
     plt.subplot(2, 1, 2)
     valid_errors = [valid_stat[0] for valid_stat in valid_stats]
-    plt.plot(valid_errors, label='Eta %s' % (str(i)))
+    plt.plot(valid_errors, label='Eta %s' % (str(learning_rate)))
 
+    test_errors.append(1-accuracy)
+
+# show to line graphs using the training and validation results
 plt.subplot(2, 1, 1)
 plt.xlabel('epoch')
 plt.ylabel('training error')
+plt.legend()
+plt.grid()
+
 plt.subplot(2, 1, 2)
 plt.xlabel('epoch')
 plt.ylabel('validation error')
 plt.legend()
 plt.grid()
+
+plt.table(cellText=[test_errors])
+
 plt.show()
