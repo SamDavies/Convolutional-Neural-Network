@@ -4,6 +4,23 @@ import numpy
 rng = numpy.random.RandomState([2015,10,10])
 rng_state = rng.get_state()
 
+class ListTable(list):
+    """ Overridden list class which takes a 2-dimensional list of
+        the form [[1,2,3],[4,5,6]], and renders an HTML Table in
+        IPython Notebook. """
+
+    def _repr_html_(self):
+        html = ["<table>"]
+        for row in self:
+            html.append("<tr>")
+
+            for col in row:
+                html.append("<td>{0}</td>".format(col))
+
+            html.append("</tr>")
+        html.append("</table>")
+        return ''.join(html)
+
 import logging
 import matplotlib.pyplot as plt
 
@@ -20,6 +37,8 @@ learning_rates = [0.5, 0.2, 0.1, 0.05, 0.01, 0.005]
 
 test_errors = []
 
+fig, axis_array = plt.subplots(1, 2, figsize=(15, 4))
+
 for learning_rate in learning_rates:
     # define the model structure
     cost = CECost()
@@ -29,7 +48,7 @@ for learning_rate in learning_rates:
     # one can stack more layers here
     # define the optimiser, here stochasitc gradient descent
     # with fixed learning rate and max_epochs as stopping criterion
-    lr_scheduler = LearningRateFixed(learning_rate=learning_rate, max_epochs=2)
+    lr_scheduler = LearningRateFixed(learning_rate=learning_rate, max_epochs=30)
     optimiser = SGDOptimiser(lr_scheduler=lr_scheduler)
 
     logger.warning('Initialising data providers...')
@@ -39,34 +58,34 @@ for learning_rate in learning_rates:
     logger.warning('Training started...')
     train_stats, valid_stats = optimiser.train(model, train_dp, valid_dp)
 
-    logger.warning('Testing the model on test set:')
+    logger.warning('Testing the model on test set...')
     test_dp = MNISTDataProvider(dset='eval', batch_size=100, max_num_batches=-10, randomize=False)
     cost, accuracy = optimiser.validate(model, test_dp)
     logger.warning('MNIST test set accuracy is %.2f %% (cost is %.3f)' % (accuracy * 100., cost))
 
-    plt.subplot(2, 1, 1)
     train_errors = [train_stat[0] for train_stat in train_stats]
-    plt.plot(train_errors, label='Eta %s' % (str(learning_rate)))
+    axis_array[0].plot(train_errors, label='Eta %s' % (str(learning_rate)))
 
-    plt.subplot(2, 1, 2)
     valid_errors = [valid_stat[0] for valid_stat in valid_stats]
-    plt.plot(valid_errors, label='Eta %s' % (str(learning_rate)))
+    axis_array[1].plot(valid_errors, label='Eta %s' % (str(learning_rate)))
 
     test_errors.append(1-accuracy)
 
 # show to line graphs using the training and validation results
-plt.subplot(2, 1, 1)
-plt.xlabel('epoch')
-plt.ylabel('training error')
-plt.legend()
-plt.grid()
+axis_array[0].set_xlabel('epoch')
+axis_array[0].set_ylabel('training error')
+# fig.legend(lines, labels, loc = (0.5, 0), ncol=5 )
+axis_array[0].grid()
 
-plt.subplot(2, 1, 2)
-plt.xlabel('epoch')
-plt.ylabel('validation error')
-plt.legend()
-plt.grid()
-
-plt.table(cellText=[test_errors])
+axis_array[1].set_xlabel('epoch')
+axis_array[1].set_ylabel('validation error')
+# axis_array[1].legend()
+axis_array[1].grid()
 
 plt.show()
+
+# print a html table of the test errors
+table = ListTable()
+table.append(["Epoch " + str(learning_rate) for learning_rate in learning_rates])
+table.append(test_errors)
+table
