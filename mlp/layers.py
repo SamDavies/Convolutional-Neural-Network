@@ -299,8 +299,7 @@ class Sigmoid(Linear):
 
     def fprop(self, inputs):
         layer_outputs = numpy.dot(inputs, self.W) + self.b
-        vector_sigmoid = numpy.vectorize(self.sigmoid, otypes=[numpy.float])
-        return vector_sigmoid(layer_outputs)
+        return Sigmoid.sigmoid(layer_outputs)
 
     def bprop(self, h, igrads):
         """
@@ -308,10 +307,9 @@ class Sigmoid(Linear):
         :param igrads: current error
         :return:
         """
-        vector_sigmoid_prime = numpy.vectorize(self.sigmoid_prime, otypes=[numpy.float])
         # deltas = igrads * dh^i/da^i
         # ograds = deltas \times da^i/dx^i
-        deltas = igrads * vector_sigmoid_prime(h)
+        deltas = igrads * Sigmoid.sigmoid_prime(h)
         ograds = numpy.dot(deltas, self.W.T)
         return deltas, ograds
 
@@ -331,12 +329,12 @@ class Softmax(Linear):
             # apply software individually to each row
             return numpy.asarray([Softmax.softmax(row) for row in sum_outputs])
 
-        exp_sum = numpy.sum([numpy.exp(i) for i in sum_outputs])
-        return numpy.asarray([numpy.exp(i)/exp_sum for i in sum_outputs])
+        exp_array = numpy.exp(sum_outputs)
+        return exp_array / numpy.sum(exp_array)
 
     def fprop(self, inputs):
         layer_outputs = numpy.dot(inputs, self.W) + self.b
-        return self.softmax(layer_outputs)
+        return Softmax.softmax(layer_outputs)
 
     def bprop(self, h, igrads):
         raise NotImplementedError()
