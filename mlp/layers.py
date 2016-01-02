@@ -1,11 +1,11 @@
-
 # Machine Learning Practical (INFR11119),
 # Pawel Swietojanski, University of Edinburgh
 
-import numpy
 import logging
-from mlp.costs import Cost
 
+import numpy
+
+from mlp.costs import Cost
 
 logger = logging.getLogger(__name__)
 
@@ -63,21 +63,22 @@ class MLP(object):
     through the model (for a mini-batch), which is required to compute
     the gradients for the parameters
     """
+
     def __init__(self, cost, rng=None):
 
         assert isinstance(cost, Cost), (
             "Cost needs to be of type mlp.costs.Cost, got %s" % type(cost)
         )
 
-        self.layers = [] #the actual list of network layers
-        self.activations = [] #keeps forward-pass activations (h from equations)
-                              # for a given minibatch (or features at 0th index)
-        self.deltas = [] #keeps back-propagated error signals (deltas from equations)
-                         # for a given minibatch and each layer
+        self.layers = []  # the actual list of network layers
+        self.activations = []  # keeps forward-pass activations (h from equations)
+        # for a given minibatch (or features at 0th index)
+        self.deltas = []  # keeps back-propagated error signals (deltas from equations)
+        # for a given minibatch and each layer
         self.cost = cost
 
         if rng is None:
-            self.rng = numpy.random.RandomState([2015,11,11])
+            self.rng = numpy.random.RandomState([2015, 11, 11])
         else:
             self.rng = rng
 
@@ -89,11 +90,11 @@ class MLP(object):
         """
 
         if len(self.activations) != len(self.layers) + 1:
-            self.activations = [None]*(len(self.layers) + 1)
+            self.activations = [None] * (len(self.layers) + 1)
 
         self.activations[0] = x
         for i in xrange(0, len(self.layers)):
-            self.activations[i+1] = self.layers[i].fprop(self.activations[i])
+            self.activations[i + 1] = self.layers[i].fprop(self.activations[i])
         return self.activations[-1]
 
     def fprop_dropout(self, x, dp_scheduler):
@@ -104,23 +105,24 @@ class MLP(object):
         """
 
         if len(self.activations) != len(self.layers) + 1:
-            self.activations = [None]*(len(self.layers) + 1)
+            self.activations = [None] * (len(self.layers) + 1)
 
         p_inp, p_hid = dp_scheduler.get_rate()
 
         d_inp = 1
-        p_inp_scaler, p_hid_scaler = 1.0/p_inp, 1.0/p_hid
+        p_inp_scaler, p_hid_scaler = 1.0 / p_inp, 1.0 / p_hid
         if p_inp < 1:
             d_inp = self.rng.binomial(1, p_inp, size=x.shape)
 
-        self.activations[0] = p_inp_scaler*d_inp*x #it's OK to scale the inputs by p_inp_scaler here
+        self.activations[0] = p_inp_scaler * d_inp * x  # it's OK to scale the inputs by p_inp_scaler here
         self.activations[1] = self.layers[0].fprop(self.activations[0])
         for i in xrange(1, len(self.layers)):
             d_hid = 1
             if p_hid < 1:
                 d_hid = self.rng.binomial(1, p_hid, size=self.activations[i].shape)
-            self.activations[i] *= d_hid #but not the hidden activations, since the non-linearity grad *may* explicitly depend on them
-            self.activations[i+1] = self.layers[i].fprop(p_hid_scaler*self.activations[i])
+            self.activations[
+                i] *= d_hid  # but not the hidden activations, since the non-linearity grad *may* explicitly depend on them
+            self.activations[i + 1] = self.layers[i].fprop(p_hid_scaler * self.activations[i])
 
         return self.activations[-1]
 
@@ -136,12 +138,12 @@ class MLP(object):
         # which will simplify indexing later on when
         # computing grads w.r.t parameters
         if len(self.deltas) != len(self.activations):
-            self.deltas = [None]*len(self.activations)
+            self.deltas = [None] * len(self.activations)
 
         # treat the top layer in special way, as it deals with the
         # cost, which may lead to some simplifications
         top_layer_idx = len(self.layers)
-        self.deltas[top_layer_idx], ograds = self.layers[top_layer_idx - 1].\
+        self.deltas[top_layer_idx], ograds = self.layers[top_layer_idx - 1]. \
             bprop_cost(self.activations[top_layer_idx], cost_grad, self.cost)
 
         p_hid_scaler = 1.0
@@ -151,8 +153,8 @@ class MLP(object):
 
         # then back-prop through remaining layers
         for i in xrange(top_layer_idx - 1, 0, -1):
-            self.deltas[i], ograds = self.layers[i - 1].\
-                bprop(self.activations[i], ograds*p_hid_scaler)
+            self.deltas[i], ograds = self.layers[i - 1]. \
+                bprop(self.activations[i], ograds * p_hid_scaler)
 
     def add_layer(self, layer):
         self.layers.append(layer)
@@ -169,10 +171,11 @@ class Layer(object):
     Abstract class defining an interface for
     other transforms.
     """
+
     def __init__(self, rng=None):
 
         if rng is None:
-            seed=[2015, 10, 1]
+            seed = [2015, 10, 1]
             self.rng = numpy.random.RandomState(seed)
         else:
             self.rng = rng
@@ -190,7 +193,7 @@ class Layer(object):
         :return: h^i, matrix of transformed by layer features
         """
         raise NotImplementedError()
-    
+
     def bprop(self, h, igrads):
         """
         Implements a backward propagation through the layer, that is, given
@@ -244,7 +247,6 @@ class Layer(object):
 
 
 class Linear(Layer):
-
     def __init__(self, idim, odim,
                  rng=None,
                  irange=0.1):
@@ -255,8 +257,8 @@ class Linear(Layer):
         self.odim = odim
 
         self.W = self.rng.uniform(
-            -irange, irange,
-            (self.idim, self.odim))
+                -irange, irange,
+                (self.idim, self.odim))
 
         self.b = numpy.zeros((self.odim,), dtype=numpy.float32)
 
@@ -273,7 +275,7 @@ class Linear(Layer):
         :return: h^i, matrix of transformed by layer features
         """
 
-        #input comes from 4D convolutional tensor, reshape to expected shape
+        # input comes from 4D convolutional tensor, reshape to expected shape
         if inputs.ndim == 4:
             inputs = inputs.reshape(inputs.shape[0], -1)
 
@@ -346,21 +348,21 @@ class Linear(Layer):
         since W and b are only layer's parameters
         """
 
-        #input comes from 4D convolutional tensor, reshape to expected shape
+        # input comes from 4D convolutional tensor, reshape to expected shape
         if inputs.ndim == 4:
             inputs = inputs.reshape(inputs.shape[0], -1)
 
-        #you could basically use different scalers for biases
-        #and weights, but it is not implemented here like this
+        # you could basically use different scalers for biases
+        # and weights, but it is not implemented here like this
         l2_W_penalty, l2_b_penalty = 0, 0
         if l2_weight > 0:
-            l2_W_penalty = l2_weight*self.W
-            l2_b_penalty = l2_weight*self.b
+            l2_W_penalty = l2_weight * self.W
+            l2_b_penalty = l2_weight * self.b
 
         l1_W_penalty, l1_b_penalty = 0, 0
         if l1_weight > 0:
-            l1_W_penalty = l1_weight*numpy.sign(self.W)
-            l1_b_penalty = l1_weight*numpy.sign(self.b)
+            l1_W_penalty = l1_weight * numpy.sign(self.W)
+            l1_b_penalty = l1_weight * numpy.sign(self.b)
 
         grad_W = numpy.dot(inputs.T, deltas) + l2_W_penalty + l1_W_penalty
         grad_b = numpy.sum(deltas, axis=0) + l2_b_penalty + l1_b_penalty
@@ -371,8 +373,8 @@ class Linear(Layer):
         return [self.W, self.b]
 
     def set_params(self, params):
-        #we do not make checks here, but the order on the list
-        #is assumed to be exactly the same as get_params() returns
+        # we do not make checks here, but the order on the list
+        # is assumed to be exactly the same as get_params() returns
         self.W = params[0]
         self.b = params[1]
 
@@ -381,25 +383,25 @@ class Linear(Layer):
 
 
 class Sigmoid(Linear):
-    def __init__(self,  idim, odim,
+    def __init__(self, idim, odim,
                  rng=None,
                  irange=0.1):
 
         super(Sigmoid, self).__init__(idim, odim, rng, irange)
-    
+
     def fprop(self, inputs):
-        #get the linear activations
+        # get the linear activations
         a = super(Sigmoid, self).fprop(inputs)
-        #stabilise the exp() computation in case some values in
-        #'a' get very negative. We limit both tails, however only
-        #negative values may lead to numerical issues -- exp(-a)
-        #clip() function does the following operation faster:
+        # stabilise the exp() computation in case some values in
+        # 'a' get very negative. We limit both tails, however only
+        # negative values may lead to numerical issues -- exp(-a)
+        # clip() function does the following operation faster:
         # a[a < -30.] = -30,
         # a[a > 30.] = 30.
         numpy.clip(a, -30.0, 30.0, out=a)
-        h = 1.0/(1 + numpy.exp(-a))
+        h = 1.0 / (1 + numpy.exp(-a))
         return h
-    
+
     def bprop(self, h, igrads):
         dsigm = h * (1.0 - h)
         deltas = igrads * dsigm
@@ -418,8 +420,7 @@ class Sigmoid(Linear):
 
 
 class Softmax(Linear):
-
-    def __init__(self,idim, odim,
+    def __init__(self, idim, odim,
                  rng=None,
                  irange=0.1):
 
@@ -442,7 +443,7 @@ class Softmax(Linear):
         axis = a.ndim - 1
         exp_a = numpy.exp(a - numpy.max(a, axis=axis, keepdims=True))
         # finally, normalise by the sum within each example
-        y = exp_a/numpy.sum(exp_a, axis=axis, keepdims=True)
+        y = exp_a / numpy.sum(exp_a, axis=axis, keepdims=True)
 
         return y
 
@@ -462,100 +463,97 @@ class Softmax(Linear):
 
 
 class Relu(Linear):
-    def __init__(self,  idim, odim,
+    def __init__(self, idim, odim,
                  rng=None,
                  irange=0.1):
-
         super(Relu, self).__init__(idim, odim, rng, irange)
 
     def fprop(self, inputs):
-        #get the linear activations
+        # get the linear activations
         a = super(Relu, self).fprop(inputs)
         h = numpy.clip(a, 0, 20.0)
-        #h = numpy.maximum(a, 0)
+        # h = numpy.maximum(a, 0)
         return h
 
     def bprop(self, h, igrads):
-        deltas = (h > 0)*igrads
+        deltas = (h > 0) * igrads
         ___, ograds = super(Relu, self).bprop(h=None, igrads=deltas)
         return deltas, ograds
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('Relu.bprop_cost method not implemented '
-                                      'for the %s cost' % cost.get_name())
+                                  'for the %s cost' % cost.get_name())
 
     def get_name(self):
         return 'relu'
 
 
 class Tanh(Linear):
-    def __init__(self,  idim, odim,
+    def __init__(self, idim, odim,
                  rng=None,
                  irange=0.1):
-
         super(Tanh, self).__init__(idim, odim, rng, irange)
 
     def fprop(self, inputs):
-        #get the linear activations
+        # get the linear activations
         a = super(Tanh, self).fprop(inputs)
         numpy.clip(a, -30.0, 30.0, out=a)
         h = numpy.tanh(a)
         return h
 
     def bprop(self, h, igrads):
-        deltas = (1.0 - h**2) * igrads
+        deltas = (1.0 - h ** 2) * igrads
         ___, ograds = super(Tanh, self).bprop(h=None, igrads=deltas)
         return deltas, ograds
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('Tanh.bprop_cost method not implemented '
-                                      'for the %s cost' % cost.get_name())
+                                  'for the %s cost' % cost.get_name())
 
     def get_name(self):
         return 'tanh'
 
 
 class Maxout(Linear):
-    def __init__(self,  idim, odim, k,
+    def __init__(self, idim, odim, k,
                  rng=None,
                  irange=0.05):
-
-        super(Maxout, self).__init__(idim, odim*k, rng, irange)
+        super(Maxout, self).__init__(idim, odim * k, rng, irange)
 
         self.max_odim = odim
         self.k = k
 
     def fprop(self, inputs):
-        #get the linear activations
+        # get the linear activations
         a = super(Maxout, self).fprop(inputs)
         ar = a.reshape(a.shape[0], self.max_odim, self.k)
         h, h_argmax = max_and_argmax(ar, axes=2, keepdims_max=True, keepdims_argmax=True)
         self.h_argmax = h_argmax
-        return h[:, :, 0] #get rid of the last reduced dimensison (of size 1)
+        return h[:, :, 0]  # get rid of the last reduced dimensison (of size 1)
 
     def bprop(self, h, igrads):
-        #hack for dropout backprop (ignore dropped neurons). Note, this is not
-        #entirely correct when h fires at 0 exaclty (but is not dropped, in which case
-        #derivative should be 1). However, this is rather unlikely to happen (that h fires as 0)
-        #and probably can be ignored for now. Otherwise, one would have to keep the dropped unit
-        #indexes and zero grads according to them.
-        igrads = (h != 0)*igrads
-        #convert into the shape where upsampling is easier
+        # hack for dropout backprop (ignore dropped neurons). Note, this is not
+        # entirely correct when h fires at 0 exaclty (but is not dropped, in which case
+        # derivative should be 1). However, this is rather unlikely to happen (that h fires as 0)
+        # and probably can be ignored for now. Otherwise, one would have to keep the dropped unit
+        # indexes and zero grads according to them.
+        igrads = (h != 0) * igrads
+        # convert into the shape where upsampling is easier
         igrads_up = igrads.reshape(igrads.shape[0], self.max_odim, 1)
-        #upsample to the linear dimension (but reshaped to (batch_size, maxed_num (1), pool_size)
+        # upsample to the linear dimension (but reshaped to (batch_size, maxed_num (1), pool_size)
         igrads_up = numpy.tile(igrads_up, (1, 1, self.k))
-        #generate mask matrix and set to 1 maxed elements
+        # generate mask matrix and set to 1 maxed elements
         mask = numpy.zeros_like(igrads_up)
         mask[self.h_argmax] = 1.0
-        #do bprop through max operator and then reshape into 2D
+        # do bprop through max operator and then reshape into 2D
         deltas = (igrads_up * mask).reshape(igrads_up.shape[0], -1)
-        #and then do bprop thorough linear part
+        # and then do bprop thorough linear part
         ___, ograds = super(Maxout, self).bprop(h=None, igrads=deltas)
         return deltas, ograds
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('Maxout.bprop_cost method not implemented '
-                                      'for the %s cost' % cost.get_name())
+                                  'for the %s cost' % cost.get_name())
 
     def get_name(self):
         return 'maxout'

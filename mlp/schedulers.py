@@ -109,7 +109,7 @@ class LearningRateNewBob(LearningRateScheduler):
         self.patience = self.init_patience
 
     def get_rate(self):
-        if (self.epoch == 1 and self.zero_rate != None):
+        if self.epoch == 1 and self.zero_rate != None:
             return self.zero_rate
         return self.rate
 
