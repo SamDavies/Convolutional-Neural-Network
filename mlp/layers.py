@@ -10,6 +10,51 @@ from mlp.costs import Cost
 logger = logging.getLogger(__name__)
 
 
+def max_and_argmax(x, axes=None, keepdims_max=False, keepdims_argmax=False):
+    """
+    Return both max and argmax for the given multi-dimensional array, possibly
+    preserve the original shapes
+    :param x: input tensor
+    :param axes: tuple of ints denoting axes across which
+                 one should perform reduction
+    :param keepdims_max: boolean, if true, shape of x is preserved in result
+    :param keepdims_argmax:, boolean, if true, shape of x is preserved in result
+    :return: max (number) and argmax (indices) of max element along certain axes
+             in multi-dimensional tensor
+    """
+    if axes is None:
+        rval_argmax = numpy.argmax(x)
+        if keepdims_argmax:
+            rval_argmax = numpy.unravel_index(rval_argmax, x.shape)
+    else:
+        if isinstance(axes, int):
+            axes = (axes,)
+        axes = tuple(axes)
+        keep_axes = numpy.array([i for i in range(x.ndim) if i not in axes])
+        transposed_x = numpy.transpose(x, numpy.concatenate((keep_axes, axes)))
+        reshaped_x = transposed_x.reshape(transposed_x.shape[:len(keep_axes)] + (-1,))
+        rval_argmax = numpy.asarray(numpy.argmax(reshaped_x, axis=-1), dtype=numpy.int64)
+
+        # rval_max_arg keeps the arg index referencing to the axis along which reduction was performed (axis=-1)
+        # when keepdims_argmax is True we need to map it back to the original shape of tensor x
+        # print 'rval maxaarg', rval_argmax.ndim, rval_argmax.shape, rval_argmax
+        if keepdims_argmax:
+            dim = tuple([x.shape[a] for a in axes])
+            rval_argmax = numpy.array([idx + numpy.unravel_index(val, dim)
+                                       for idx, val in numpy.ndenumerate(rval_argmax)])
+            # convert to numpy indexing convention (row indices first, then columns)
+            rval_argmax = zip(*rval_argmax)
+
+    if keepdims_max is False and keepdims_argmax is True:
+        # this could potentially save O(N) steps by not traversing array once more
+        # to get max value, haven't benchmark it though
+        rval_max = x[rval_argmax]
+    else:
+        rval_max = numpy.asarray(numpy.amax(x, axis=axes, keepdims=keepdims_max))
+
+    return rval_max, rval_argmax
+
+
 class MLP(object):
     """
     This is a container for an arbitrary sequence of other transforms
@@ -18,7 +63,7 @@ class MLP(object):
     through the model (for a mini-batch), which is required to compute
     the gradients for the parameters
     """
-    def __init__(self, cost):
+    def __init__(self, cost, rng=None):
 
         assert isinstance(cost, Cost), (
             "Cost needs to be of type mlp.costs.Cost, got %s" % type(cost)
@@ -30,6 +75,11 @@ class MLP(object):
         self.deltas = [] #keeps back-propagated error signals (deltas from equations)
                          # for a given minibatch and each layer
         self.cost = cost
+
+        if rng is None:
+            self.rng = numpy.random.RandomState([2015,11,11])
+        else:
+            self.rng = rng
 
     def fprop(self, x):
         """
@@ -46,7 +96,35 @@ class MLP(object):
             self.activations[i+1] = self.layers[i].fprop(self.activations[i])
         return self.activations[-1]
 
-    def bprop(self, cost_grad):
+    def fprop_dropout(self, x, dp_scheduler):
+        """
+        :param inputs: mini-batch of data-points x
+        :param dp_scheduler: dropout scheduler
+        :return: y (top layer activation) which is an estimate of y given x
+        """
+
+        if len(self.activations) != len(self.layers) + 1:
+            self.activations = [None]*(len(self.layers) + 1)
+
+        p_inp, p_hid = dp_scheduler.get_rate()
+
+        d_inp = 1
+        p_inp_scaler, p_hid_scaler = 1.0/p_inp, 1.0/p_hid
+        if p_inp < 1:
+            d_inp = self.rng.binomial(1, p_inp, size=x.shape)
+
+        self.activations[0] = p_inp_scaler*d_inp*x #it's OK to scale the inputs by p_inp_scaler here
+        self.activations[1] = self.layers[0].fprop(self.activations[0])
+        for i in xrange(1, len(self.layers)):
+            d_hid = 1
+            if p_hid < 1:
+                d_hid = self.rng.binomial(1, p_hid, size=self.activations[i].shape)
+            self.activations[i] *= d_hid #but not the hidden activations, since the non-linearity grad *may* explicitly depend on them
+            self.activations[i+1] = self.layers[i].fprop(p_hid_scaler*self.activations[i])
+
+        return self.activations[-1]
+
+    def bprop(self, cost_grad, dp_scheduler=None):
         """
         :param cost_grad: matrix -- grad of the cost w.r.t y
         :return: None, the deltas are kept in the model
@@ -66,10 +144,15 @@ class MLP(object):
         self.deltas[top_layer_idx], ograds = self.layers[top_layer_idx - 1].\
             bprop_cost(self.activations[top_layer_idx], cost_grad, self.cost)
 
+        p_hid_scaler = 1.0
+        if dp_scheduler is not None:
+            p_inp, p_hid = dp_scheduler.get_rate()
+            p_hid_scaler /= p_hid
+
         # then back-prop through remaining layers
         for i in xrange(top_layer_idx - 1, 0, -1):
             self.deltas[i], ograds = self.layers[i - 1].\
-                bprop(self.activations[i], ograds)
+                bprop(self.activations[i], ograds*p_hid_scaler)
 
     def add_layer(self, layer):
         self.layers.append(layer)
@@ -144,7 +227,7 @@ class Layer(object):
 
         raise NotImplementedError()
 
-    def pgrads(self, inputs, deltas):
+    def pgrads(self, inputs, deltas, **kwargs):
         """
         Return gradients w.r.t parameters
         """
@@ -189,6 +272,11 @@ class Linear(Layer):
         :param inputs: matrix of features (x) or the output of the previous layer h^{i-1}
         :return: h^i, matrix of transformed by layer features
         """
+
+        #input comes from 4D convolutional tensor, reshape to expected shape
+        if inputs.ndim == 4:
+            inputs = inputs.reshape(inputs.shape[0], -1)
+
         a = numpy.dot(inputs, self.W) + self.b
         # here f() is an identity function, so just return a linear transformation
         return a
@@ -240,12 +328,13 @@ class Linear(Layer):
             raise NotImplementedError('Linear.bprop_cost method not implemented '
                                       'for the %s cost' % cost.get_name())
 
-    def pgrads(self, inputs, deltas):
+    def pgrads(self, inputs, deltas, l1_weight=0, l2_weight=0):
         """
         Return gradients w.r.t parameters
 
         :param inputs, input to the i-th layer
         :param deltas, deltas computed in bprop stage up to -ith layer
+        :param kwargs, key-value optional arguments
         :return list of grads w.r.t parameters dE/dW and dE/db in *exactly*
                 the same order as the params are returned by get_params()
 
@@ -257,8 +346,24 @@ class Linear(Layer):
         since W and b are only layer's parameters
         """
 
-        grad_W = numpy.dot(inputs.T, deltas)
-        grad_b = numpy.sum(deltas, axis=0)
+        #input comes from 4D convolutional tensor, reshape to expected shape
+        if inputs.ndim == 4:
+            inputs = inputs.reshape(inputs.shape[0], -1)
+
+        #you could basically use different scalers for biases
+        #and weights, but it is not implemented here like this
+        l2_W_penalty, l2_b_penalty = 0, 0
+        if l2_weight > 0:
+            l2_W_penalty = l2_weight*self.W
+            l2_b_penalty = l2_weight*self.b
+
+        l1_W_penalty, l1_b_penalty = 0, 0
+        if l1_weight > 0:
+            l1_W_penalty = l1_weight*numpy.sign(self.W)
+            l1_b_penalty = l1_weight*numpy.sign(self.b)
+
+        grad_W = numpy.dot(inputs.T, deltas) + l2_W_penalty + l1_W_penalty
+        grad_b = numpy.sum(deltas, axis=0) + l2_b_penalty + l1_b_penalty
 
         return [grad_W, grad_b]
 
@@ -274,71 +379,183 @@ class Linear(Layer):
     def get_name(self):
         return 'linear'
 
-        
+
 class Sigmoid(Linear):
+    def __init__(self,  idim, odim,
+                 rng=None,
+                 irange=0.1):
+
+        super(Sigmoid, self).__init__(idim, odim, rng, irange)
+    
+    def fprop(self, inputs):
+        #get the linear activations
+        a = super(Sigmoid, self).fprop(inputs)
+        #stabilise the exp() computation in case some values in
+        #'a' get very negative. We limit both tails, however only
+        #negative values may lead to numerical issues -- exp(-a)
+        #clip() function does the following operation faster:
+        # a[a < -30.] = -30,
+        # a[a > 30.] = 30.
+        numpy.clip(a, -30.0, 30.0, out=a)
+        h = 1.0/(1 + numpy.exp(-a))
+        return h
+    
+    def bprop(self, h, igrads):
+        dsigm = h * (1.0 - h)
+        deltas = igrads * dsigm
+        ___, ograds = super(Sigmoid, self).bprop(h=None, igrads=deltas)
+        return deltas, ograds
+
+    def bprop_cost(self, h, igrads, cost):
+        if cost is None or cost.get_name() == 'bce':
+            return super(Sigmoid, self).bprop(h=h, igrads=igrads)
+        else:
+            raise NotImplementedError('Sigmoid.bprop_cost method not implemented '
+                                      'for the %s cost' % cost.get_name())
+
     def get_name(self):
         return 'sigmoid'
 
-    @staticmethod
-    def sigmoid(value):
-        """
-        This applies the sigmoid function to a single value
-        :param value: the value to apply sigmoid to
-        :return: the sigmoid output value
-        """
-        return 1.0/(1.0 + numpy.exp(-value))
-
-    @staticmethod
-    def sigmoid_prime(sigmoid):
-        """
-        This applies the sigmoid prime function to a single value
-        :param value: the value to apply sigmoid prime to
-        :return: the sigmoid output value
-        """
-        return sigmoid*(1.0-sigmoid)
-
-    def fprop(self, inputs):
-        layer_outputs = numpy.dot(inputs, self.W) + self.b
-        return Sigmoid.sigmoid(layer_outputs)
-
-    def bprop(self, h, igrads):
-        """
-        :param h: it's an activation produced in forward pass
-        :param igrads: current error
-        :return:
-        """
-        # deltas = igrads * dh^i/da^i
-        # ograds = deltas \times da^i/dx^i
-        deltas = igrads * Sigmoid.sigmoid_prime(h)
-        ograds = numpy.dot(deltas, self.W.T)
-        return deltas, ograds
-
 
 class Softmax(Linear):
+
+    def __init__(self,idim, odim,
+                 rng=None,
+                 irange=0.1):
+
+        super(Softmax, self).__init__(idim,
+                                      odim,
+                                      rng=rng,
+                                      irange=irange)
+
+    def fprop(self, inputs):
+
+        # compute the linear outputs
+        a = super(Softmax, self).fprop(inputs)
+        # apply numerical stabilisation by subtracting max
+        # from each row (not required for the coursework)
+        # then compute exponent
+        assert a.ndim in [1, 2], (
+            "Expected the linear activation in Softmax layer to be either "
+            "vector or matrix, got %ith dimensional tensor" % a.ndim
+        )
+        axis = a.ndim - 1
+        exp_a = numpy.exp(a - numpy.max(a, axis=axis, keepdims=True))
+        # finally, normalise by the sum within each example
+        y = exp_a/numpy.sum(exp_a, axis=axis, keepdims=True)
+
+        return y
+
+    def bprop(self, h, igrads):
+        raise NotImplementedError('Softmax.bprop not implemented for hidden layer.')
+
+    def bprop_cost(self, h, igrads, cost):
+
+        if cost is None or cost.get_name() == 'ce':
+            return super(Softmax, self).bprop(h=h, igrads=igrads)
+        else:
+            raise NotImplementedError('Softmax.bprop_cost method not implemented '
+                                      'for %s cost' % cost.get_name())
+
     def get_name(self):
         return 'softmax'
 
-    @staticmethod
-    def softmax(sum_outputs):
-        """
-        Given a array of output units, normalize them using softmax. Each
-        :param sum_outputs: the array of row probs which add to 1
-        :return: a vector of normalized probability units
-        """
-        if sum_outputs.ndim > 1:
-            # apply software individually to each row
-            return numpy.asarray([Softmax.softmax(row) for row in sum_outputs])
 
-        exp_array = numpy.exp(sum_outputs)
-        return exp_array / numpy.sum(exp_array)
+class Relu(Linear):
+    def __init__(self,  idim, odim,
+                 rng=None,
+                 irange=0.1):
+
+        super(Relu, self).__init__(idim, odim, rng, irange)
 
     def fprop(self, inputs):
-        layer_outputs = numpy.dot(inputs, self.W) + self.b
-        return Softmax.softmax(layer_outputs)
+        #get the linear activations
+        a = super(Relu, self).fprop(inputs)
+        h = numpy.clip(a, 0, 20.0)
+        #h = numpy.maximum(a, 0)
+        return h
 
     def bprop(self, h, igrads):
-        raise NotImplementedError()
+        deltas = (h > 0)*igrads
+        ___, ograds = super(Relu, self).bprop(h=None, igrads=deltas)
+        return deltas, ograds
 
     def bprop_cost(self, h, igrads, cost):
-        ograds = numpy.dot(igrads, self.W.T)
-        return igrads, ograds
+        raise NotImplementedError('Relu.bprop_cost method not implemented '
+                                      'for the %s cost' % cost.get_name())
+
+    def get_name(self):
+        return 'relu'
+
+
+class Tanh(Linear):
+    def __init__(self,  idim, odim,
+                 rng=None,
+                 irange=0.1):
+
+        super(Tanh, self).__init__(idim, odim, rng, irange)
+
+    def fprop(self, inputs):
+        #get the linear activations
+        a = super(Tanh, self).fprop(inputs)
+        numpy.clip(a, -30.0, 30.0, out=a)
+        h = numpy.tanh(a)
+        return h
+
+    def bprop(self, h, igrads):
+        deltas = (1.0 - h**2) * igrads
+        ___, ograds = super(Tanh, self).bprop(h=None, igrads=deltas)
+        return deltas, ograds
+
+    def bprop_cost(self, h, igrads, cost):
+        raise NotImplementedError('Tanh.bprop_cost method not implemented '
+                                      'for the %s cost' % cost.get_name())
+
+    def get_name(self):
+        return 'tanh'
+
+
+class Maxout(Linear):
+    def __init__(self,  idim, odim, k,
+                 rng=None,
+                 irange=0.05):
+
+        super(Maxout, self).__init__(idim, odim*k, rng, irange)
+
+        self.max_odim = odim
+        self.k = k
+
+    def fprop(self, inputs):
+        #get the linear activations
+        a = super(Maxout, self).fprop(inputs)
+        ar = a.reshape(a.shape[0], self.max_odim, self.k)
+        h, h_argmax = max_and_argmax(ar, axes=2, keepdims_max=True, keepdims_argmax=True)
+        self.h_argmax = h_argmax
+        return h[:, :, 0] #get rid of the last reduced dimensison (of size 1)
+
+    def bprop(self, h, igrads):
+        #hack for dropout backprop (ignore dropped neurons). Note, this is not
+        #entirely correct when h fires at 0 exaclty (but is not dropped, in which case
+        #derivative should be 1). However, this is rather unlikely to happen (that h fires as 0)
+        #and probably can be ignored for now. Otherwise, one would have to keep the dropped unit
+        #indexes and zero grads according to them.
+        igrads = (h != 0)*igrads
+        #convert into the shape where upsampling is easier
+        igrads_up = igrads.reshape(igrads.shape[0], self.max_odim, 1)
+        #upsample to the linear dimension (but reshaped to (batch_size, maxed_num (1), pool_size)
+        igrads_up = numpy.tile(igrads_up, (1, 1, self.k))
+        #generate mask matrix and set to 1 maxed elements
+        mask = numpy.zeros_like(igrads_up)
+        mask[self.h_argmax] = 1.0
+        #do bprop through max operator and then reshape into 2D
+        deltas = (igrads_up * mask).reshape(igrads_up.shape[0], -1)
+        #and then do bprop thorough linear part
+        ___, ograds = super(Maxout, self).bprop(h=None, igrads=deltas)
+        return deltas, ograds
+
+    def bprop_cost(self, h, igrads, cost):
+        raise NotImplementedError('Maxout.bprop_cost method not implemented '
+                                      'for the %s cost' % cost.get_name())
+
+    def get_name(self):
+        return 'maxout'
