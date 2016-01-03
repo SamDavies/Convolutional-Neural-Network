@@ -1,6 +1,8 @@
 # Machine Learning Practical (INFR11119),
 # Pawel Swietojanski, University of Edinburgh
+import logging
 
+import numpy as np
 
 class LearningRateScheduler(object):
     """
@@ -163,6 +165,36 @@ class DropoutFixed(LearningRateList):
 
     def get_rate(self):
         return self.lr_list[0]
+
+    def get_next_rate(self, current_accuracy=None):
+        return self.get_rate()
+
+
+class DropoutAnnealing(LearningRateList):
+    def __init__(self, p_inp_keep, p_hid_keep, decay):
+        """
+        Dropout rate schedule starting with a fraction p units dropped, decreasing at a constant rate to 0
+        :param p_inp_keep: the initial percentage of input units to keep
+        :param p_hid_keep: the initial percentage of hidden units to keep
+        :param decay: the rate of decay of kept units (decay to 1)
+        :return:
+        """
+        assert 0 < p_inp_keep <= 1 and 0 < p_hid_keep <= 1, (
+            "Dropout 'keep' probabilites are suppose to be in (0, 1] range"
+        )
+        self.decay = decay
+        self.p_inp_keep = p_inp_keep
+        self.p_hid_keep = p_hid_keep
+        super(DropoutAnnealing, self).__init__([(p_inp_keep, p_hid_keep)], max_epochs=999)
+
+    def get_rate(self):
+        logger = logging.getLogger()
+        p_inp, p_hid = self.lr_list[0]
+        # increase the percentage of units kept
+        self.p_inp_keep, self.p_hid_keep = min(p_inp+self.decay, 1), min(p_hid+self.decay, 1)
+        # logger.warning('Input Dropout decayed from {0} to {1}'.format(p_inp, self.p_inp_keep))
+        # logger.warning('Hidden Dropout decayed from {0} to {1}'.format(p_hid, self.p_hid_keep))
+        return self.p_inp_keep, self.p_hid_keep
 
     def get_next_rate(self, current_accuracy=None):
         return self.get_rate()
