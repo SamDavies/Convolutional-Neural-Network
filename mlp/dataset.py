@@ -182,6 +182,22 @@ class MNISTDataProvider(DataProvider):
         return rval
 
 
+def add_batch(data_provider, batch):
+    x, t = batch
+    x = numpy.array(x)
+    t = numpy.array(t)
+    assert len(x) == data_provider.batch_size, (
+        "The size of the batch you are trying to add is different from the batch size")
+    data_provider._max_num_batches += 1
+    data_provider.x = numpy.append(data_provider.x, x, axis=0)
+    data_provider.t = numpy.append(data_provider.t, t, axis=0)
+
+
+def add_batches(data_provider, batches):
+    for batch in batches:
+        add_batch(data_provider, batch)
+
+
 class MetOfficeDataProvider(DataProvider):
     """
     The class iterates over South Scotland Weather, in possibly
