@@ -59,7 +59,7 @@ class CrossEntropyTestCase(TestCase):
         auto_encoder = CrossEntropy(learning_rate=0.5, max_epochs=5)
         auto_encoder.pretrain(model, train_iter=train_dp)
         self.assertAlmostEqual(model.layers[0].W[0][0], 0.03, delta=0.005)
-        self.assertAlmostEqual(model.layers[1].W[0][0], -0.03, delta=0.005)
+        self.assertAlmostEqual(model.layers[1].W[0][0], -0.011, delta=0.05)
         self.assertAlmostEqual(model.layers[2].W[0][0], 0.097, delta=0.005)
 
 
