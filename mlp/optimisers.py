@@ -5,10 +5,10 @@ import numpy
 import time
 import logging
 
-from mlp.layers import MLP
+from mlp.costs import MSECost
+from mlp.layers import MLP, Linear
 from mlp.dataset import DataProvider
-from mlp.schedulers import LearningRateScheduler
-
+from mlp.schedulers import LearningRateScheduler, LearningRateFixed
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class Optimiser(object):
     def train(self, model, train_iter, valid_iter=None):
         raise NotImplementedError()
 
-    def validate(self, model, valid_iterator, l1_weight=0, l2_weight=0):
+    def validate(self, model, valid_iterator, l1_weight=0, l2_weight=0, is_autoencoder=False):
         assert isinstance(model, MLP), (
             "Expected model to be a subclass of 'mlp.layers.MLP'"
             " class but got %s " % type(model)
@@ -33,6 +33,8 @@ class Optimiser(object):
 
         acc_list, nll_list = [], []
         for x, t in valid_iterator:
+            if is_autoencoder:
+                t = x
             y = model.fprop(x)
             nll_list.append(model.cost.cost(y, t))
             acc_list.append(numpy.mean(self.classification_accuracy(y, t)))
@@ -99,7 +101,7 @@ class SGDOptimiser(Optimiser):
         self.l1_weight = l1_weight
         self.l2_weight = l2_weight
 
-    def train_epoch(self, model, train_iterator, learning_rate):
+    def train_epoch(self, model, train_iterator, learning_rate, is_autoencoder=False):
 
         assert isinstance(model, MLP), (
             "Expected model to be a subclass of 'mlp.layers.MLP'"
@@ -112,6 +114,9 @@ class SGDOptimiser(Optimiser):
 
         acc_list, nll_list = [], []
         for x, t in train_iterator:
+
+            if is_autoencoder:
+                t = x
 
             # get the prediction
             if self.dp_scheduler is not None:
@@ -151,7 +156,7 @@ class SGDOptimiser(Optimiser):
 
         return training_cost, numpy.mean(acc_list)
 
-    def train(self, model, train_iterator, valid_iterator=None):
+    def train(self, model, train_iterator, valid_iterator=None, is_autoencoder=False):
 
         converged = False
         cost_name = model.cost.get_name()
@@ -159,14 +164,14 @@ class SGDOptimiser(Optimiser):
 
         # do the initial validation
         train_iterator.reset()
-        tr_nll, tr_acc = self.validate(model, train_iterator, self.l1_weight, self.l2_weight)
+        tr_nll, tr_acc = self.validate(model, train_iterator, self.l1_weight, self.l2_weight, is_autoencoder=is_autoencoder)
         logger.info('Epoch %i: Training cost (%s) for initial model is %.3f. Accuracy is %.2f%%'
                     % (self.lr_scheduler.epoch, cost_name, tr_nll, tr_acc * 100.))
         tr_stats.append((tr_nll, tr_acc))
 
         if valid_iterator is not None:
             valid_iterator.reset()
-            valid_nll, valid_acc = self.validate(model, valid_iterator, self.l1_weight, self.l2_weight)
+            valid_nll, valid_acc = self.validate(model, valid_iterator, self.l1_weight, self.l2_weight, is_autoencoder=is_autoencoder)
             logger.info('Epoch %i: Validation cost (%s) for initial model is %.3f. Accuracy is %.2f%%'
                         % (self.lr_scheduler.epoch, cost_name, valid_nll, valid_acc * 100.))
             valid_stats.append((valid_nll, valid_acc))
@@ -177,7 +182,8 @@ class SGDOptimiser(Optimiser):
             tstart = time.clock()
             tr_nll, tr_acc = self.train_epoch(model=model,
                                               train_iterator=train_iterator,
-                                              learning_rate=self.lr_scheduler.get_rate())
+                                              learning_rate=self.lr_scheduler.get_rate(),
+                                              is_autoencoder=is_autoencoder)
             tstop = time.clock()
             tr_stats.append((tr_nll, tr_acc))
 
@@ -188,7 +194,7 @@ class SGDOptimiser(Optimiser):
             if valid_iterator is not None:
                 valid_iterator.reset()
                 valid_nll, valid_acc = self.validate(model, valid_iterator,
-                                                     self.l1_weight, self.l2_weight)
+                                                     self.l1_weight, self.l2_weight, is_autoencoder=is_autoencoder)
                 logger.info('Epoch %i: Validation cost (%s) is %.3f. Accuracy is %.2f%%'
                             % (self.lr_scheduler.epoch + 1, cost_name, valid_nll, valid_acc * 100.))
                 self.lr_scheduler.get_next_rate(valid_acc)
@@ -212,3 +218,117 @@ class SGDOptimiser(Optimiser):
             converged = (self.lr_scheduler.get_rate() == 0)
 
         return tr_stats, valid_stats
+
+
+class AutoEncoder(Optimiser):
+    def pretrain(self, model, train_iter, valid_iter=None):
+        autoencoder_learning_rate = 0.5
+        autoencoder_max_epochs = 5
+
+        cost = MSECost()
+        cost_name = cost.get_name()
+
+        autoencoder_inputs = []
+
+        for x, t in train_iter:
+            autoencoder_inputs.append(x)
+
+        for i in xrange(0, len(model.layers)-1):
+            autoencoder = MLP(cost)
+            autoencoder.add_layer(model.layers[i])
+            autoencoder.add_layer(Linear(idim=model.layers[i].odim, odim=model.layers[i].idim))
+
+            converged = False
+            tr_stats = []
+
+            autoencoder_scheduler = LearningRateFixed(learning_rate=autoencoder_learning_rate,
+                                                      max_epochs=autoencoder_max_epochs)
+
+            while not converged:
+                train_iter.reset()
+
+                tr_nll, tr_acc = self.pretrain_epoch(model=autoencoder,
+                                                     train_iterator=autoencoder_inputs,
+                                                     learning_rate=autoencoder_scheduler.get_rate())
+
+                tr_stats.append((tr_nll, tr_acc))
+
+                logger.info('Epoch %i: Pre-training cost (%s) is %.3f. Accuracy is %.2f%%'
+                        % (autoencoder_scheduler.epoch + 1, cost_name, tr_nll, tr_acc * 100.))
+
+                autoencoder_scheduler.get_next_rate(None)
+                converged = (autoencoder_scheduler.get_rate() == 0)
+
+            autoencoder2 = MLP(cost)
+            autoencoder2.add_layer(model.layers[i])
+
+            autoencoder_outputs = []
+            for the_input in autoencoder_inputs:
+                the_output = autoencoder2.fprop(the_input)
+                autoencoder_outputs.append(the_output)
+
+            autoencoder_inputs = autoencoder_outputs
+
+    def pretrain_epoch(self, model, train_iterator, learning_rate):
+        assert isinstance(model, MLP), (
+            "Expected model to be a subclass of 'mlp.layers.MLP'"
+            " class but got %s " % type(model)
+        )
+
+        acc_list, nll_list = [], []
+        for x in train_iterator:
+
+            # get the prediction
+            y = model.fprop(x)
+
+            # compute the cost and grad of the cost w.r.t y
+            cost = model.cost.cost(y, x)
+            cost_grad = model.cost.grad(y, x)
+
+            # do backward pass through the model
+            model.bprop(cost_grad)
+
+            #update the model, here we iterate over layers
+            #and then over each parameter in the layer
+            effective_learning_rate = learning_rate / x.shape[0]
+
+            for i in xrange(0, len(model.layers)):
+                params = model.layers[i].get_params()
+                grads = model.layers[i].pgrads(inputs=model.activations[i],
+                                               deltas=model.deltas[i + 1],
+                                               l1_weight=0.0,
+                                               l2_weight=0.0)
+                uparams = []
+                for param, grad in zip(params, grads):
+                    param = param - effective_learning_rate * grad
+                    uparams.append(param)
+                model.layers[i].set_params(uparams)
+
+            nll_list.append(cost)
+            acc_list.append(numpy.mean(self.classification_accuracy(y, x)))
+
+        #compute the prior penalties contribution (parameter dependent only)
+        prior_costs = Optimiser.compute_prior_costs(model, 0.0, 0.0)
+        training_cost = numpy.mean(nll_list) + sum(prior_costs)
+
+        return training_cost, numpy.mean(acc_list)
+
+    @staticmethod
+    def train_layer(layers, train_iter, valid_iter=None):
+        """
+        Given a layer, train it using the previous layer for both the input and the output
+        :param layers: the layers to train
+        :param train_iter: the training set
+        :param valid_iter: the validation set
+        :return: the model
+        """
+        cost = MSECost()
+        model = MLP(cost=cost)
+        # create the AutoEncoder sandwich
+        model.set_layers(layers)
+        # do some basic training
+        lr_scheduler = LearningRateFixed(learning_rate=0.01, max_epochs=5)
+        optimiser = SGDOptimiser(lr_scheduler=lr_scheduler, dp_scheduler=None, l1_weight=0.0, l2_weight=0.0)
+        optimiser.train(model, train_iter, valid_iter, is_autoencoder=True)
+        return model
+
