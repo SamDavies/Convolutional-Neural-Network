@@ -238,6 +238,8 @@ class AutoEncoder(Optimiser):
             # set this layer as the input to the next layer
             auto_encoder_inputs = auto_encoder_outputs
 
+        self.pre_train_output(model, train_iter)
+
     def pre_train_layer(self, model, i, train_data):
         """
         Pre train the given layer of the model
@@ -302,6 +304,75 @@ class AutoEncoder(Optimiser):
 
             nll_list.append(cost)
             acc_list.append(numpy.mean(self.classification_accuracy(y, x)))
+
+        # compute the prior penalties contribution (parameter dependent only)
+        prior_costs = Optimiser.compute_prior_costs(model, 0.0, 0.0)
+        training_cost = numpy.mean(nll_list) + sum(prior_costs)
+
+        return training_cost, numpy.mean(acc_list)
+
+    def pre_train_output(self, model, train_iter):
+        """
+        Pre train only the output layer
+        :return:
+        """
+        ouput_scheduler = LearningRateFixed(learning_rate=self.learning_rate, max_epochs=self.max_epochs)
+        converged = False
+        tr_stats = []
+        while not converged:
+            train_iter.reset()
+            tr_nll, tr_acc = self.pre_train_output_epoch(model=model, train_iterator=train_iter,
+                                                         learning_rate=ouput_scheduler.get_rate())
+
+            tr_stats.append((tr_nll, tr_acc))
+
+            logger.info('Epoch %i: Pre-training cost (%s) is %.3f. Accuracy is %.2f%%'
+                        % (ouput_scheduler.epoch + 1, self.cost.get_name(), tr_nll, tr_acc * 100.))
+
+            ouput_scheduler.get_next_rate(None)
+            converged = (ouput_scheduler.get_rate() == 0)
+
+    def pre_train_output_epoch(self, model, train_iterator, learning_rate):
+        assert isinstance(model, MLP), (
+            "Expected model to be a subclass of 'mlp.layers.MLP'"
+            " class but got %s " % type(model)
+        )
+        assert isinstance(train_iterator, DataProvider), (
+            "Expected iterator to be a subclass of 'mlp.dataset.DataProvider'"
+            " class but got %s " % type(train_iterator)
+        )
+
+        acc_list, nll_list = [], []
+        for x, t in train_iterator:
+
+            y = model.fprop(x)
+
+            # compute the cost and grad of the cost w.r.t y
+            cost = model.cost.cost(y, t)
+            cost_grad = model.cost.grad(y, t)
+
+            # do backward pass through the model
+            model.bprop(cost_grad)
+
+            # update the model, here we iterate over layers
+            # and then over each parameter in the layer
+            effective_learning_rate = learning_rate / x.shape[0]
+
+            # only update the output layer' weights
+            i = len(model.layers)-1
+            params = model.layers[i].get_params()
+            grads = model.layers[i].pgrads(inputs=model.activations[i],
+                                           deltas=model.deltas[i + 1],
+                                           l1_weight=0.0,
+                                           l2_weight=0.0)
+            uparams = []
+            for param, grad in zip(params, grads):
+                param = param - effective_learning_rate * grad
+                uparams.append(param)
+            model.layers[i].set_params(uparams)
+
+            nll_list.append(cost)
+            acc_list.append(numpy.mean(self.classification_accuracy(y, t)))
 
         # compute the prior penalties contribution (parameter dependent only)
         prior_costs = Optimiser.compute_prior_costs(model, 0.0, 0.0)
