@@ -6,7 +6,7 @@ import time
 import logging
 
 from mlp.costs import MSECost, CECost
-from mlp.layers import MLP, Linear
+from mlp.layers import MLP, Linear, Softmax
 from mlp.dataset import DataProvider
 from mlp.schedulers import LearningRateScheduler, LearningRateFixed
 
@@ -406,7 +406,8 @@ class CrossEntropy(Optimiser):
         cross_entropy = MLP(self.cost)
         for j in xrange(0, i+1):
             cross_entropy.add_layer(model.layers[j])
-        cross_entropy.add_layer(model.layers[-1])
+        cross_entropy.add_layer(Softmax(idim=model.layers[i].odim, odim=model.layers[-1].odim))
+        # cross_entropy.add_layer(model.layers[-1])
 
         cross_entropy_scheduler = LearningRateFixed(learning_rate=self.learning_rate, max_epochs=self.max_epochs)
         converged = False
