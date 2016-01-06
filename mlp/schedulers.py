@@ -185,16 +185,22 @@ class DropoutAnnealing(LearningRateList):
         self.decay = decay
         self.p_inp_keep = p_inp_keep
         self.p_hid_keep = p_hid_keep
+        self.epoch = 0
         super(DropoutAnnealing, self).__init__([(p_inp_keep, p_hid_keep)], max_epochs=999)
 
     def get_rate(self):
-        logger = logging.getLogger()
-        p_inp, p_hid = self.lr_list[0]
-        # increase the percentage of units kept
-        self.p_inp_keep, self.p_hid_keep = min(p_inp+self.decay, 1), min(p_hid+self.decay, 1)
-        # logger.warning('Input Dropout decayed from {0} to {1}'.format(p_inp, self.p_inp_keep))
-        # logger.warning('Hidden Dropout decayed from {0} to {1}'.format(p_hid, self.p_hid_keep))
-        return self.p_inp_keep, self.p_hid_keep
+        return self.lr_list[0]
 
     def get_next_rate(self, current_accuracy=None):
-        return self.get_rate()
+        # increase the percentage of units kept
+        p_inp, p_hid = self.get_rate()
+        self.epoch += 1
+        self.lr_list[0] = min(p_inp+self.decay, 1), min(p_hid+self.decay, 1)
+        logger = logging.getLogger()
+        if p_inp != 1 and self.lr_list[0][0] == 1:
+            logger.warning('Input Dropout stopped after {} epochs'.format(self.epoch))
+        if p_hid != 1 and self.lr_list[0][1] == 1:
+            logger.warning('Hidden Dropout stopped after {} epochs'.format(self.epoch))
+        # logger.warning('Input Dropout decayed to {0}'.format(p_inp))
+        # logger.warning('Hidden Dropout decayed to {0}'.format(p_hid))
+        return p_inp, p_hid

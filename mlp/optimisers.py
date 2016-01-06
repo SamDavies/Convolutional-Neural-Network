@@ -108,6 +108,9 @@ class SGDOptimiser(Optimiser):
             " class but got %s " % type(train_iterator)
         )
 
+        if self.dp_scheduler is not None:
+            self.dp_scheduler.get_next_rate()
+
         acc_list, nll_list = [], []
         for x, t in train_iterator:
 
