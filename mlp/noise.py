@@ -9,7 +9,7 @@ class NoiseMaker(object):
     def make_examples(self, rng):
         # create an array which is the size of the number of batches batches
         new_example_batches = [None] * self.num_batches
-        # go through all of the baches
+        # go through all of the batches
         for ith_batch in xrange(self.num_batches):
             # get the images and the digits for this batch
             x, t = self.data_set.next()
