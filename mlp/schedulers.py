@@ -57,6 +57,43 @@ class LearningRateFixed(LearningRateList):
         return self.get_rate()
 
 
+class LearningRateExp(LearningRateList):
+    def __init__(self, learning_rate, max_epochs, rate):
+        assert learning_rate > 0, (
+            "learning rate expected to be > 0, got %f" % learning_rate
+        )
+        self.rate = rate
+        super(LearningRateExp, self).__init__([learning_rate], max_epochs)
+
+    def get_rate(self):
+        if self.epoch < self.max_epochs:
+            return self.lr_list[0] * np.exp(-float(self.epoch)/float(self.rate))
+        return 0.0
+
+    def get_next_rate(self, current_accuracy=None):
+        super(LearningRateExp, self).get_next_rate(current_accuracy=None)
+        return self.get_rate()
+
+
+class LearningRateRecip(LearningRateList):
+    def __init__(self, learning_rate, max_epochs, rate, c):
+        assert learning_rate > 0, (
+            "learning rate expected to be > 0, got %f" % learning_rate
+        )
+        self.rate = rate
+        self.c = c
+        super(LearningRateRecip, self).__init__([learning_rate], max_epochs)
+
+    def get_rate(self):
+        if self.epoch < self.max_epochs:
+            return self.lr_list[0] * np.power(1.0+(float(self.epoch)/float(self.rate)), float(self.c))
+        return 0.0
+
+    def get_next_rate(self, current_accuracy=None):
+        super(LearningRateRecip, self).get_next_rate(current_accuracy=None)
+        return self.get_rate()
+
+
 class LearningRateNewBob(LearningRateScheduler):
     """
     newbob learning rate schedule.
