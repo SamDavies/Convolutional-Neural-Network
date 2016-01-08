@@ -87,15 +87,20 @@ class ConvLinear(Layer):
         """
         Reshape the weight so we can apply nice transformations to it
         """
-        return numpy.swapaxes(self.W, 0, 1).reshape((576, 5, 5))
+        feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
+        feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
+        return numpy.swapaxes(self.W, 0, 1).reshape((feature_map_x, feature_map_y, 5, 5))
 
     def fprop(self, inputs):
         # go through each unit of this layer
         img = inputs.reshape(self.image_shape)
-        for unit_i in range(0, self.odim):
-            # find the sum of the input * weight for every pixel in the kernel
-            sub_img = img[unit_i:self.kernel_shape[0], 0:self.kernel_shape[1]]
-            numpy.dot(img, self.W[unit_i]) + self.b
+        weights = self.get_weights()
+        num_units = len(weights[0])
+        for unit_i in range(0, ):
+            for unit_j in range(0, len(weights[0])):
+                # find the sum of the input * weight for every pixel in the kernel
+                sub_img = img[unit_i:self.kernel_shape[0], 0:self.kernel_shape[1]]
+                numpy.dot(img, weights[unit_i]) + self.b[unit_i]
 
         a = numpy.dot(inputs, self.W) + self.b
         # here f() is an identity function, so just return a linear transformation
