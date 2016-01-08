@@ -3,6 +3,7 @@ from unittest import TestCase
 import numpy
 
 from mlp.conv import ConvLinear
+from numpy.testing import assert_array_equal
 
 
 class FeatureMapTestCase(TestCase):
@@ -40,6 +41,7 @@ class FeatureMapTestCase(TestCase):
         self.assertEqual(new[0][0][4][4], conv.W[24][0])
 
     def test_fprop(self):
+        """ Ensure that 1 forward prop pass works """
         conv = ConvLinear(1, 1,
                           image_shape=(28, 28),
                           kernel_shape=(5, 5),
@@ -50,12 +52,19 @@ class FeatureMapTestCase(TestCase):
                           conv_bck=None,
                           conv_grad=None)
 
-        conv.W = numpy.zeros(conv.W.shape, dtype=numpy.float32)
-        conv.W = numpy.ones((5, 5), dtype=numpy.float32)
+        conv.W = numpy.ones(conv.W.shape, dtype=numpy.float32)
 
         # make an image of zeros with 1 in 2 corners
         input = numpy.zeros(784, dtype=numpy.float32)
         input[0] = 1.0
         input[783] = 1.0
-        output = numpy.zeros(conv.odim, dtype=numpy.float32)
-        self.assertEqual(conv.fprop(input), output)
+
+        weights = conv.get_weights()
+        num_rows_units = len(weights[0])
+        num_cols_units = len(weights[1])
+
+        expected = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
+        expected[0][0] = 5.0
+        expected[23][23] = 5.0
+        actual = conv.fprop(input).reshape(24, 24)
+        assert_array_equal(actual, expected)
