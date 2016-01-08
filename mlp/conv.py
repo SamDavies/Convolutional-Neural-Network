@@ -112,12 +112,14 @@ class ConvLinear(Layer):
             for col_j in range(0, num_cols_units):
                 # find the sum of the input * weight for every pixel in the kernel
                 sub_img = img[row_i:self.kernel_shape[0]+row_i, col_j:self.kernel_shape[1]+col_j]
-                input_dot_weights = numpy.dot(sub_img, weights[row_i][col_j]) + bias[row_i][col_j]
+                input_dot_weights = numpy.multiply(sub_img, weights[row_i][col_j]) + bias[row_i][col_j]
                 # flatten and sum across all elements
                 output[row_i][col_j] = input_dot_weights.reshape(self.idim).sum()
 
         # here f() is an identity function, so just return a linear transformation
         return output.reshape(self.odim)
+
+    # def calculate
 
     def bprop(self, h, igrads):
         raise NotImplementedError()
