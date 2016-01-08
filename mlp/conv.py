@@ -74,7 +74,7 @@ class ConvLinear(Layer):
         self.conv_grad = conv_grad
 
         # output dimensions is the number of kernels which fit into the image
-        self.idim = kernel_shape[0] *  kernel_shape[1]
+        self.idim = kernel_shape[0] * kernel_shape[1]
         self.odim = (image_shape[0] - kernel_shape[0] + 1) * (image_shape[1] - kernel_shape[1] + 1)
         # make an array of kernels for each feature
         self.W = self.rng.uniform(
@@ -91,20 +91,33 @@ class ConvLinear(Layer):
         feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
         return numpy.swapaxes(self.W, 0, 1).reshape((feature_map_x, feature_map_y, 5, 5))
 
+    def get_bias(self):
+        """
+        Reshape the bias so we can apply nice transformations to it
+        """
+        feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
+        feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
+        return self.b.reshape((feature_map_x, feature_map_y))
+
     def fprop(self, inputs):
-        # go through each unit of this layer
+        # the pixels of the input image
         img = inputs.reshape(self.image_shape)
         weights = self.get_weights()
-        num_units = len(weights[0])
-        for unit_i in range(0, ):
-            for unit_j in range(0, len(weights[0])):
+        bias = self.get_bias()
+        num_rows_units = len(weights[0])
+        num_cols_units = len(weights[1])
+        output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
+        # go through each unit of this layer
+        for row_i in range(0, num_rows_units):
+            for col_j in range(0, num_cols_units):
                 # find the sum of the input * weight for every pixel in the kernel
-                sub_img = img[unit_i:self.kernel_shape[0], 0:self.kernel_shape[1]]
-                numpy.dot(img, weights[unit_i]) + self.b[unit_i]
+                sub_img = img[row_i:self.kernel_shape[0]+row_i, col_j:self.kernel_shape[1]+col_j]
+                input_dot_weights = numpy.dot(sub_img, weights[row_i][col_j]) + bias[row_i][col_j]
+                # flatten and sum across all elements
+                output[row_i][col_j] = input_dot_weights.reshape(self.idim).sum()
 
-        a = numpy.dot(inputs, self.W) + self.b
         # here f() is an identity function, so just return a linear transformation
-        return a
+        return output.reshape(self.odim)
 
     def bprop(self, h, igrads):
         raise NotImplementedError()
