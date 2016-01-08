@@ -64,7 +64,7 @@ class FeatureMapTestCase(TestCase):
         num_cols_units = len(weights[1])
 
         expected = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
-        expected[0][0] = 5.0
-        expected[23][23] = 5.0
+        expected[0][0] = 1.0
+        expected[23][23] = 1.0
         actual = conv.fprop(input).reshape(24, 24)
         assert_array_equal(actual, expected)
