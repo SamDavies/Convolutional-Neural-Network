@@ -86,7 +86,7 @@ class LearningRateRecip(LearningRateList):
 
     def get_rate(self):
         if self.epoch < self.max_epochs:
-            return self.lr_list[0] * np.power(1.0+(float(self.epoch)/float(self.rate)), float(self.c))
+            return self.lr_list[0] * np.power(1.0+(float(self.epoch)/float(self.rate)), -float(self.c))
         return 0.0
 
     def get_next_rate(self, current_accuracy=None):
