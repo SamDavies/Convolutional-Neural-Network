@@ -62,10 +62,44 @@ class ConvLinear(Layer):
 
         super(ConvLinear, self).__init__(rng=rng)
 
-        raise NotImplementedError()
+        self.num_inp_feat_maps = num_inp_feat_maps
+        self.num_out_feat_maps = num_out_feat_maps
+
+        self.image_shape = image_shape
+        self.kernel_shape = kernel_shape
+        self.stride = stride
+
+        self.conv_fwd = conv_fwd
+        self.conv_bck = conv_bck
+        self.conv_grad = conv_grad
+
+        # output dimensions is the number of kernels which fit into the image
+        self.idim = kernel_shape[0] *  kernel_shape[1]
+        self.odim = (image_shape[0] - kernel_shape[0] + 1) * (image_shape[1] - kernel_shape[1] + 1)
+        # make an array of kernels for each feature
+        self.W = self.rng.uniform(
+                -irange, irange,
+                (self.idim, self.odim))
+
+        self.b = numpy.zeros((self.odim,), dtype=numpy.float32)
+
+    def get_weights(self):
+        """
+        Reshape the weight so we can apply nice transformations to it
+        """
+        return numpy.swapaxes(self.W, 0, 1).reshape((576, 5, 5))
 
     def fprop(self, inputs):
-        raise NotImplementedError()
+        # go through each unit of this layer
+        img = inputs.reshape(self.image_shape)
+        for unit_i in range(0, self.odim):
+            # find the sum of the input * weight for every pixel in the kernel
+            sub_img = img[unit_i:self.kernel_shape[0], 0:self.kernel_shape[1]]
+            numpy.dot(img, self.W[unit_i]) + self.b
+
+        a = numpy.dot(inputs, self.W) + self.b
+        # here f() is an identity function, so just return a linear transformation
+        return a
 
     def bprop(self, h, igrads):
         raise NotImplementedError()
