@@ -12,7 +12,7 @@ class FeatureMapTestCase(TestCase):
         self.rng_state = self.rng.get_state()
 
     def test_create_linear(self):
-        conv = ConvLinear(1,
+        conv = ConvLinear(1, 1,
                           image_shape=(28, 28),
                           kernel_shape=(5, 5),
                           stride=(1, 1),
@@ -26,7 +26,7 @@ class FeatureMapTestCase(TestCase):
 
     def test_fprop(self):
         """ Ensure that 1 forward prop pass works """
-        conv = ConvLinear(1,
+        conv = ConvLinear(1, 1,
                           image_shape=(28, 28),
                           kernel_shape=(5, 5),
                           stride=(1, 1),
@@ -50,5 +50,5 @@ class FeatureMapTestCase(TestCase):
         expected = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0] = 1.0
         expected[23][23] = 1.0
-        actual = conv.fprop_single_image(input, 0).reshape(24, 24)
+        actual = conv.fprop_single_feature_map([input], 0).reshape(24, 24)
         assert_array_equal(actual, expected)
