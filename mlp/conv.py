@@ -119,10 +119,15 @@ class ConvLinear(Layer):
          - number of batches
          - number of input feature maps
          - number of pixels
-        :param inputs:
-        :return:
+        :param inputs: the batch to forward propagate
+        :return: the activations for the whole batch
         """
-        # reshape if coming from a non-convultional layer
+        # reshape if coming from a non-convulsion layer
+        if inputs.ndim == 2:
+            inputs = numpy.expand_dims(inputs, axis=1)
+
+        # reshape the pixels to be 2D making 4D inputs
+        inputs = inputs.reshape((inputs.shape[0], inputs.shape[1], self.image_shape[0], self.image_shape[1]))
 
         num_batches = inputs.shape[0]
         num_rows_units = self.W.shape[1]
@@ -142,7 +147,7 @@ class ConvLinear(Layer):
         # and the non-convolutional layers will flatter this to
         # - number of batches
         # - the rest
-        return []
+        return activations
 
     def fprop_single_feature_map(self, feature_maps, f):
         """
