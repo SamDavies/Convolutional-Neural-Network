@@ -34,7 +34,8 @@ def my1_conv2d(image, kernels, strides=(1, 1)):
 
 class ConvLinear(Layer):
     def __init__(self,
-                 num_feat_maps,
+                 num_inp_feat_maps,
+                 num_out_feat_maps,
                  image_shape=(28, 28),
                  kernel_shape=(5, 5),
                  stride=(1, 1),
@@ -60,7 +61,8 @@ class ConvLinear(Layer):
 
         super(ConvLinear, self).__init__(rng=rng)
 
-        self.num_feat_maps = num_feat_maps
+        self.num_inp_feat_maps = num_inp_feat_maps
+        self.num_out_feat_maps = num_out_feat_maps
 
         self.image_shape = image_shape
         self.kernel_shape = kernel_shape
@@ -75,14 +77,14 @@ class ConvLinear(Layer):
         # self.odim = (image_shape[0] - kernel_shape[0] + 1) * (image_shape[1] - kernel_shape[1] + 1)
         # make an array of kernels for each feature
 
-        # feature map
+        # number of output feature maps
         # unit row
         # unit col
         # kernel row
         # kernel col
         self.W = self.rng.uniform(
                 -irange, irange,
-                (num_feat_maps,
+                (num_out_feat_maps,
                  (image_shape[0] - kernel_shape[0] + 1),
                  (image_shape[1] - kernel_shape[1] + 1),
                  kernel_shape[0],
@@ -90,7 +92,7 @@ class ConvLinear(Layer):
         )
 
         self.b = numpy.zeros((
-            num_feat_maps,
+            num_out_feat_maps,
             (image_shape[0] - kernel_shape[0] + 1),
             (image_shape[1] - kernel_shape[1] + 1)
         ), dtype=numpy.float32)
@@ -112,31 +114,60 @@ class ConvLinear(Layer):
     #     return self.b.reshape((feature_map_x, feature_map_y))
 
     def fprop(self, inputs):
+        """
+        The input will have shape
+         - number of batches
+         - number of input feature maps
+         - number of pixels
+        :param inputs:
+        :return:
+        """
+        # reshape if coming from a non-convultional layer
 
-        feature_maps = numpy.empty([self.num_feat_maps, 2])
-        for f in self.num_feat_maps:
-            feature_maps[f] = self.fprop_single_image(inputs, f)
+        num_batches = inputs.shape[0]
+        num_rows_units = self.W.shape[1]
+        num_cols_units = self.W.shape[2]
+        # make the activation tot be the size of the output
+        activations = numpy.empty((num_batches, self.num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
 
-    def fprop_single_image(self, img, f):
+        for b in xrange(0, num_batches):
+            for f in xrange(0, self.num_out_feat_maps):
+                activations[b][f] = self.fprop_single_feature_map(inputs[b], f)
+
+        # output shape is
+        # - number of batches
+        # - number of output feature maps
+        # - number of rows of units in this layer
+        # - number of cols of units in this layer
+        # and the non-convolutional layers will flatter this to
+        # - number of batches
+        # - the rest
+        return []
+
+    def fprop_single_feature_map(self, feature_maps, f):
         """
         Given an image calculate the fprop for 1 feature maps
-        :param img: the 2D image data
+        :param feature_maps: the 2D image data X feature maps making 3D
         :return: the predicted output of this layer
         """
+        feature_map = feature_maps[f]
         # the pixels of the input image
-        num_rows_units = len(self.W[f][0])
-        num_cols_units = len(self.W[f][1])
+        num_rows_units = self.W.shape[1]
+        num_cols_units = self.W.shape[2]
         output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
         # go through each unit of this layer
         for row_i in range(0, num_rows_units):
             for col_j in range(0, num_cols_units):
                 # find the sum of the input * weight for every pixel in the kernel
-                sub_img = img[row_i:self.kernel_shape[0] + row_i, col_j:self.kernel_shape[1] + col_j]
+                sub_img = feature_map[row_i:self.kernel_shape[0] + row_i, col_j:self.kernel_shape[1] + col_j]
                 input_dot_weights = numpy.multiply(sub_img, self.W[f][row_i][col_j]) + self.b[f][row_i][col_j]
                 # flatten and sum across all elements
                 output[row_i][col_j] = input_dot_weights.reshape(self.kernel_shape[0] * self.kernel_shape[1]).sum()
 
         # here f() is an identity function, so just return a linear transformation
+        # output shape is
+        # - number of rows of units in this layer
+        # - number of cols of units in this layer
         return output
 
     def bprop(self, h, igrads):
