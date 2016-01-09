@@ -1,4 +1,3 @@
-
 # Machine Learning Practical (INFR11119),
 # Pawel Swietojanski, University of Edinburgh
 
@@ -6,7 +5,6 @@
 import numpy
 import logging
 from mlp.layers import Layer
-
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +16,7 @@ in the model where you are expected to apply the convolutional operator. This wi
 keep the layer implementation independent of conv operator implementation, and you can easily
 swap it layer, for example, for more efficient implementation if you came up with one, etc.
 """
+
 
 def my1_conv2d(image, kernels, strides=(1, 1)):
     """
@@ -35,8 +34,7 @@ def my1_conv2d(image, kernels, strides=(1, 1)):
 
 class ConvLinear(Layer):
     def __init__(self,
-                 num_inp_feat_maps,
-                 num_out_feat_maps,
+                 num_feat_maps,
                  image_shape=(28, 28),
                  kernel_shape=(5, 5),
                  stride=(1, 1),
@@ -62,8 +60,7 @@ class ConvLinear(Layer):
 
         super(ConvLinear, self).__init__(rng=rng)
 
-        self.num_inp_feat_maps = num_inp_feat_maps
-        self.num_out_feat_maps = num_out_feat_maps
+        self.num_feat_maps = num_feat_maps
 
         self.image_shape = image_shape
         self.kernel_shape = kernel_shape
@@ -74,52 +71,73 @@ class ConvLinear(Layer):
         self.conv_grad = conv_grad
 
         # output dimensions is the number of kernels which fit into the image
-        self.idim = kernel_shape[0] * kernel_shape[1]
-        self.odim = (image_shape[0] - kernel_shape[0] + 1) * (image_shape[1] - kernel_shape[1] + 1)
+        # self.idim = kernel_shape[0] * kernel_shape[1]
+        # self.odim = (image_shape[0] - kernel_shape[0] + 1) * (image_shape[1] - kernel_shape[1] + 1)
         # make an array of kernels for each feature
+
+        # feature map
+        # unit row
+        # unit col
+        # kernel row
+        # kernel col
         self.W = self.rng.uniform(
                 -irange, irange,
-                (self.idim, self.odim))
+                (num_feat_maps,
+                 (image_shape[0] - kernel_shape[0] + 1),
+                 (image_shape[1] - kernel_shape[1] + 1),
+                 kernel_shape[0],
+                 kernel_shape[1])
+        )
 
-        self.b = numpy.zeros((self.odim,), dtype=numpy.float32)
+        self.b = numpy.zeros((
+            num_feat_maps,
+            (image_shape[0] - kernel_shape[0] + 1),
+            (image_shape[1] - kernel_shape[1] + 1)
+        ), dtype=numpy.float32)
 
-    def get_weights(self):
-        """
-        Reshape the weight so we can apply nice transformations to it
-        """
-        feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
-        feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
-        return numpy.swapaxes(self.W, 0, 1).reshape((feature_map_x, feature_map_y, 5, 5))
-
-    def get_bias(self):
-        """
-        Reshape the bias so we can apply nice transformations to it
-        """
-        feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
-        feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
-        return self.b.reshape((feature_map_x, feature_map_y))
+    # def get_weights(self):
+    #     """
+    #     Reshape the weight so we can apply nice transformations to it
+    #     """
+    #     feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
+    #     feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
+    #     return numpy.swapaxes(self.W, 0, 1).reshape((feature_map_x, feature_map_y, 5, 5))
+    #
+    # def get_bias(self):
+    #     """
+    #     Reshape the bias so we can apply nice transformations to it
+    #     """
+    #     feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
+    #     feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
+    #     return self.b.reshape((feature_map_x, feature_map_y))
 
     def fprop(self, inputs):
+
+        feature_maps = numpy.empty([self.num_feat_maps, 2])
+        for f in self.num_feat_maps:
+            feature_maps[f] = self.fprop_single_image(inputs, f)
+
+    def fprop_single_image(self, img, f):
+        """
+        Given an image calculate the fprop for 1 feature maps
+        :param img: the 2D image data
+        :return: the predicted output of this layer
+        """
         # the pixels of the input image
-        img = inputs.reshape(self.image_shape)
-        weights = self.get_weights()
-        bias = self.get_bias()
-        num_rows_units = len(weights[0])
-        num_cols_units = len(weights[1])
+        num_rows_units = len(self.W[f][0])
+        num_cols_units = len(self.W[f][1])
         output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
         # go through each unit of this layer
         for row_i in range(0, num_rows_units):
             for col_j in range(0, num_cols_units):
                 # find the sum of the input * weight for every pixel in the kernel
-                sub_img = img[row_i:self.kernel_shape[0]+row_i, col_j:self.kernel_shape[1]+col_j]
-                input_dot_weights = numpy.multiply(sub_img, weights[row_i][col_j]) + bias[row_i][col_j]
+                sub_img = img[row_i:self.kernel_shape[0] + row_i, col_j:self.kernel_shape[1] + col_j]
+                input_dot_weights = numpy.multiply(sub_img, self.W[f][row_i][col_j]) + self.b[f][row_i][col_j]
                 # flatten and sum across all elements
-                output[row_i][col_j] = input_dot_weights.reshape(self.idim).sum()
+                output[row_i][col_j] = input_dot_weights.reshape(self.kernel_shape[0] * self.kernel_shape[1]).sum()
 
         # here f() is an identity function, so just return a linear transformation
-        return output.reshape(self.odim)
-
-    # def calculate
+        return output
 
     def bprop(self, h, igrads):
         raise NotImplementedError()
@@ -139,9 +157,10 @@ class ConvLinear(Layer):
     def get_name(self):
         return 'convlinear'
 
-#you can derive here particular non-linear implementations:
-#class ConvSigmoid(ConvLinear):
-#...
+
+# you can derive here particular non-linear implementations:
+# class ConvSigmoid(ConvLinear):
+# ...
 
 
 class ConvMaxPool2D(Layer):
