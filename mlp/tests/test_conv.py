@@ -5,6 +5,9 @@ import numpy
 from mlp.conv import ConvLinear
 from numpy.testing import assert_array_equal
 
+from mlp.costs import CECost
+from mlp.layers import MLP, Linear
+
 
 class FeatureMapTestCase(TestCase):
     def setUp(self):
@@ -165,3 +168,73 @@ class FeatureMapTestCase(TestCase):
         assert_array_equal(actual, expected, verbose=True)
 
 
+class ConvLinearTestCase(TestCase):
+    def test_model_fprop(self):
+        """ Ensure that 1 forward prop pass works """
+        cost = CECost()
+        model = MLP(cost=cost)
+        model.add_layer(
+                ConvLinear(1, 1,
+                           image_shape=(28, 28),
+                           kernel_shape=(5, 5),
+                           stride=(1, 1),
+                           irange=0.2,
+                           rng=None,
+                           conv_fwd=None,
+                           conv_bck=None,
+                           conv_grad=None)
+        )
+        model.add_layer(Linear(idim=576, odim=2))
+
+        model.layers[0].W = numpy.ones(model.layers[0].W.shape, dtype=numpy.float32)
+        model.layers[1].W = numpy.ones(model.layers[1].W.shape, dtype=numpy.float32)
+
+        # make an image of zeros with 1 in 2 corners
+        image = numpy.zeros((784), dtype=numpy.float32)
+        image[0] = 1.0
+        image[783] = 1.0
+
+        # make 1 feature map
+        feature_maps = numpy.array([image])
+
+        # make a batch of size 2
+        batch = numpy.array([feature_maps, feature_maps])
+
+        expected = numpy.array([[2., 2.], [2., 2.]])
+        actual = model.fprop(batch)
+        assert_array_equal(actual, expected, verbose=True)
+
+    def test_model_fprop_multi_feature_maps(self):
+        """ Ensure that 1 forward prop pass works """
+        cost = CECost()
+        model = MLP(cost=cost)
+        model.add_layer(
+                ConvLinear(1, 2,
+                           image_shape=(28, 28),
+                           kernel_shape=(5, 5),
+                           stride=(1, 1),
+                           irange=0.2,
+                           rng=None,
+                           conv_fwd=None,
+                           conv_bck=None,
+                           conv_grad=None)
+        )
+        model.add_layer(Linear(idim=1152, odim=2))
+
+        model.layers[0].W = numpy.ones(model.layers[0].W.shape, dtype=numpy.float32)
+        model.layers[1].W = numpy.ones(model.layers[1].W.shape, dtype=numpy.float32)
+
+        # make an image of zeros with 1 in 2 corners
+        image = numpy.zeros((784), dtype=numpy.float32)
+        image[0] = 1.0
+        image[783] = 1.0
+
+        # make 1 feature map
+        feature_maps = numpy.array([image, image])
+
+        # make a batch of size 2
+        batch = numpy.array([feature_maps, feature_maps])
+
+        expected = numpy.array([[4., 4.], [4., 4.]])
+        actual = model.fprop(batch)
+        assert_array_equal(actual, expected, verbose=True)
