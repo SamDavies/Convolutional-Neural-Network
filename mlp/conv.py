@@ -18,18 +18,46 @@ swap it layer, for example, for more efficient implementation if you came up wit
 """
 
 
-def my1_conv2d(image, kernels, strides=(1, 1)):
+def convolution_fprop(layer, inputs):
     """
-    Implements a 2d valid convolution of kernels with the image
+    Implements a forward propagation for a convolution layer
     Note: filer means the same as kernel and convolution (correlation) of those with the input space
     produces feature maps (sometimes refereed to also as receptive fields). Also note, that
     feature maps are synonyms here to channels, and as such num_inp_channels == num_inp_feat_maps
-    :param image: 4D tensor of sizes (batch_size, num_input_channels, img_shape_x, img_shape_y)
-    :param filters: 4D tensor of filters of size (num_inp_feat_maps, num_out_feat_maps, kernel_shape_x, kernel_shape_y)
-    :param strides: a tuple (stride_x, stride_y), specifying the shift of the kernels in x and y dimensions
-    :return: 4D tensor of size (batch_size, num_out_feature_maps, feature_map_shape_x, feature_map_shape_y)
+    :param layer: the convolution layer
+    :param inputs: 4D tensor of size (batch_size, num_out_feature_maps, num_rows_in_layer, num_cols_in_layer)
+    :return: 4D tensor of size (batch_size, num_in_feature_maps, num_rows_in_layer, num_cols_in_layer)
     """
-    raise NotImplementedError('Write me!')
+    num_batches = inputs.shape[0]
+    num_rows_units = layer.W.shape[1]
+    num_cols_units = layer.W.shape[2]
+    # make the activation tot be the size of the output
+    activations = numpy.empty((num_batches, layer.num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
+    for b in xrange(0, num_batches):
+        for f in xrange(0, layer.num_out_feat_maps):
+
+            """ Given an image calculate the fprop for 1 feature maps """
+            input_feature_maps = inputs[b]
+            # the pixels of the input image
+            num_rows_units = layer.W.shape[1]
+            num_cols_units = layer.W.shape[2]
+            output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
+            # go through each unit of this layer
+            for row_i in range(0, num_rows_units):
+                for col_j in range(0, num_cols_units):
+                    for input_feature_map in input_feature_maps:
+                        # find the sum of the input * weight for every pixel in the kernel
+                        sub_img = input_feature_map[row_i:layer.kernel_shape[0] + row_i, col_j:layer.kernel_shape[1] + col_j]
+                        input_dot_weights = numpy.multiply(sub_img, layer.W[f][row_i][col_j]) + layer.b[f][row_i][col_j]
+                        # flatten and sum across all elements
+                        output[row_i][col_j] += input_dot_weights.reshape(layer.kernel_shape[0] * layer.kernel_shape[1]).sum()
+
+            # output shape is
+            # - number of rows of units in this layer
+            # - number of cols of units in this layer
+            activations[b][f] = output
+
+    return activations
 
 
 class ConvLinear(Layer):
@@ -41,9 +69,9 @@ class ConvLinear(Layer):
                  stride=(1, 1),
                  irange=0.2,
                  rng=None,
-                 conv_fwd=my1_conv2d,
-                 conv_bck=my1_conv2d,
-                 conv_grad=my1_conv2d):
+                 conv_fwd=convolution_fprop,
+                 conv_bck=convolution_fprop,
+                 conv_grad=convolution_fprop):
         """
 
         :param num_inp_feat_maps: int, a number of input feature maps (channels)
@@ -72,11 +100,6 @@ class ConvLinear(Layer):
         self.conv_bck = conv_bck
         self.conv_grad = conv_grad
 
-        # output dimensions is the number of kernels which fit into the image
-        # self.idim = kernel_shape[0] * kernel_shape[1]
-        # self.odim = (image_shape[0] - kernel_shape[0] + 1) * (image_shape[1] - kernel_shape[1] + 1)
-        # make an array of kernels for each feature
-
         # number of output feature maps
         # unit row
         # unit col
@@ -97,22 +120,6 @@ class ConvLinear(Layer):
             (image_shape[1] - kernel_shape[1] + 1)
         ), dtype=numpy.float32)
 
-    # def get_weights(self):
-    #     """
-    #     Reshape the weight so we can apply nice transformations to it
-    #     """
-    #     feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
-    #     feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
-    #     return numpy.swapaxes(self.W, 0, 1).reshape((feature_map_x, feature_map_y, 5, 5))
-    #
-    # def get_bias(self):
-    #     """
-    #     Reshape the bias so we can apply nice transformations to it
-    #     """
-    #     feature_map_x = (self.image_shape[0] - self.kernel_shape[0] + 1)
-    #     feature_map_y = (self.image_shape[1] - self.kernel_shape[1] + 1)
-    #     return self.b.reshape((feature_map_x, feature_map_y))
-
     def fprop(self, inputs):
         """
         The input will have shape
@@ -129,18 +136,10 @@ class ConvLinear(Layer):
         # reshape the pixels to be 2D making 4D inputs
         inputs = inputs.reshape((inputs.shape[0], inputs.shape[1], self.image_shape[0], self.image_shape[1]))
 
-        num_batches = inputs.shape[0]
-        num_rows_units = self.W.shape[1]
-        num_cols_units = self.W.shape[2]
-        # make the activation tot be the size of the output
-        activations = numpy.empty((num_batches, self.num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
-
-        for b in xrange(0, num_batches):
-            for f in xrange(0, self.num_out_feat_maps):
-                activations[b][f] = self.fprop_single_feature_map(inputs[b], f)
+        activations = convolution_fprop(self, inputs)
 
         # output shape is
-        # - number of batches
+        # - batch size
         # - number of output feature maps
         # - number of rows of units in this layer
         # - number of cols of units in this layer
@@ -148,33 +147,6 @@ class ConvLinear(Layer):
         # - number of batches
         # - the rest
         return activations
-
-    def fprop_single_feature_map(self, input_feature_maps, f):
-        """
-        Given an image calculate the fprop for 1 feature maps
-        :param input_feature_maps: the 2D image data X feature maps making 3D
-        :param f: the index of the current output feature map
-        :return: the predicted output of this layer
-        """
-        # the pixels of the input image
-        num_rows_units = self.W.shape[1]
-        num_cols_units = self.W.shape[2]
-        output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
-        # go through each unit of this layer
-        for row_i in range(0, num_rows_units):
-            for col_j in range(0, num_cols_units):
-                for input_feature_map in input_feature_maps:
-                    # find the sum of the input * weight for every pixel in the kernel
-                    sub_img = input_feature_map[row_i:self.kernel_shape[0] + row_i, col_j:self.kernel_shape[1] + col_j]
-                    input_dot_weights = numpy.multiply(sub_img, self.W[f][row_i][col_j]) + self.b[f][row_i][col_j]
-                    # flatten and sum across all elements
-                    output[row_i][col_j] += input_dot_weights.reshape(self.kernel_shape[0] * self.kernel_shape[1]).sum()
-
-        # here f() is an identity function, so just return a linear transformation
-        # output shape is
-        # - number of rows of units in this layer
-        # - number of cols of units in this layer
-        return output
 
     def bprop(self, h, igrads):
         """
@@ -193,27 +165,31 @@ class ConvLinear(Layer):
         # shape the igrads into this layer size
         deltas_square = igrads.reshape(igrads.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2])
 
-        ograds = numpy.zeros((igrads.shape[0], self.image_shape[0], self.image_shape[1]), dtype=numpy.float32)
+        ograds = numpy.zeros((igrads.shape[0], self.num_inp_feat_maps, self.image_shape[0], self.image_shape[1]), dtype=numpy.float32)
 
         # for each image
         for image_i in range(0, igrads.shape[0]):
-            # for each row of units in this layer
-            for row_u in range(0, self.W.shape[1]):
-                # for each col of units in this layer
-                for col_u in range(0, self.W.shape[2]):
-                    # for each feature map in this layer
-                    for feature_map_f in range(0, self.num_out_feat_maps):
-                        unit_delta = deltas_square[image_i][feature_map_f][row_u][col_u]
-                        # find the portion in the image which is effected by this unit
-                        image_segment = ograds[image_i][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
-                        image_segment += unit_delta
+            # for eaxh input feature map
+            for inp_feature_map_f in range(0, self.num_inp_feat_maps):
+                # for each row of units in this layer
+                for row_u in range(0, self.W.shape[1]):
+                    # for each col of units in this layer
+                    for col_u in range(0, self.W.shape[2]):
+                        # for each feature map in this layer
+                        for out_feature_map_f in range(0, self.num_out_feat_maps):
+                            unit_delta = deltas_square[image_i][out_feature_map_f][row_u][col_u]
+                            # find the portion in the image which is effected by this unit
+                            image_segment = ograds[image_i][inp_feature_map_f][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
+                            image_segment += unit_delta
 
         # flatten the image in ograds
         ograds_flat = ograds.reshape(igrads.shape[0], -1)
 
         # shape of ograds:
         # - batch size
-        # - units in this layer
+        # - num input feature map
+        # - input image rows
+        # - input image cols
         # shape of deltas same as igrads
         return deltas, ograds_flat
 
