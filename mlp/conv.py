@@ -176,19 +176,99 @@ class ConvLinear(Layer):
         return output
 
     def bprop(self, h, igrads):
-        raise NotImplementedError()
+        """
+        h shape is:
+            - batch size
+            - units in this layer
+        :param h: the activations produced in the forward pass of this layer
+        :param igrads: igrads, error signal (or gradient) flowing to the layer, note,
+               this in general case does not corresponds to 'deltas' used to update
+               the layer's parameters, to get deltas ones need to multiply it with
+               the dh^i/da^i derivative
+        :return:
+        """
+        deltas = igrads
+
+        # shape the igrades into this layer size
+        deltas_square = igrads.reshape(igrads.shape[0], self.W.shape[1], self.W.shape[2])
+
+        ograds = numpy.zeros((igrads.shape[0], self.image_shape[0], self.image_shape[1]), dtype=numpy.float32)
+
+        # for each image
+        for image_i in range(0, igrads.shape[0]):
+            # for each row of units in this layer
+            for row_u in range(0, self.W.shape[1]):
+                # for each col of units in this layer
+                for col_u in range(0, self.W.shape[2]):
+                        unit_delta = deltas_square[image_i][row_u][col_u]
+                        # find the portion in the image which is effected by this unit
+                        image_segment = ograds[image_i][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
+                        image_segment += unit_delta
+
+        # shape of ograds:
+        # - batch size
+        # - units in this layer
+        # shape of deltas same as igrads
+        return deltas, ograds
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('ConvLinear.bprop_cost method not implemented')
 
     def pgrads(self, inputs, deltas, l1_weight=0, l2_weight=0):
-        raise NotImplementedError()
+        """
+        Using the deltas, calculate which weights are effected by each unit.
+        Make a sudo weights from the deltas by summing the deltas for each corresponding weight.
+        Also sum acroos layer above's inputs
+        :param inputs: batch size X
+        :param deltas:
+        :param l1_weight:
+        :param l2_weight:
+        :return:
+        """
+        # shape the input into an image
+        inputs = inputs.reshape((inputs.shape[0], self.image_shape[0], self.image_shape[1]))
+
+        # shape the deltas into row by cols for units of this layer
+        deltas = deltas.reshape((deltas.shape[0], self.W.shape[1], self.W.shape[2]))
+
+        # you could basically use different scalers for biases
+        # and weights, but it is not implemented here like this
+        l2_W_penalty, l2_b_penalty = 0, 0
+        if l2_weight > 0:
+            l2_W_penalty = l2_weight * self.W
+            l2_b_penalty = l2_weight * self.b
+
+        l1_W_penalty, l1_b_penalty = 0, 0
+        if l1_weight > 0:
+            l1_W_penalty = l1_weight * numpy.sign(self.W)
+            l1_b_penalty = l1_weight * numpy.sign(self.b)
+
+        # set up deltas that be added to weight in the next step
+        # i.e they have the same shape as weights
+        grad_W = numpy.zeros(self.W.shape, dtype=numpy.float32)
+
+        # for each row of units in this layer
+        for row_u in range(0, self.W.shape[1]):
+            # for each col of units in this layer
+            for col_u in range(0, self.W.shape[2]):
+                # for each image
+                for image_i in range(0, inputs.shape[0]):
+                    unit_delta = deltas[image_i][row_u][col_u]
+                    input_kernel = inputs[image_i][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
+                    grad_W[0][row_u][col_u] += input_kernel * unit_delta
+
+        grad_b_flat = numpy.sum(deltas, axis=0) + l2_b_penalty + l1_b_penalty
+        # make the gradients for the bias square
+        grad_b = grad_b_flat.reshape((self.b.shape[1], self.b.shape[1]))
+
+        return [grad_W, grad_b]
 
     def get_params(self):
-        raise NotImplementedError()
+        return [self.W, self.b]
 
     def set_params(self, params):
-        raise NotImplementedError()
+        self.W = params[0]
+        self.b = params[1]
 
     def get_name(self):
         return 'convlinear'
