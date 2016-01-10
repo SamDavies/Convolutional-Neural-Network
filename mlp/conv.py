@@ -149,13 +149,13 @@ class ConvLinear(Layer):
         # - the rest
         return activations
 
-    def fprop_single_feature_map(self, feature_maps, f):
+    def fprop_single_feature_map(self, input_feature_maps, f):
         """
         Given an image calculate the fprop for 1 feature maps
-        :param feature_maps: the 2D image data X feature maps making 3D
+        :param input_feature_maps: the 2D image data X feature maps making 3D
+        :param f: the index of the current output feature map
         :return: the predicted output of this layer
         """
-        feature_map = feature_maps[f]
         # the pixels of the input image
         num_rows_units = self.W.shape[1]
         num_cols_units = self.W.shape[2]
@@ -163,11 +163,12 @@ class ConvLinear(Layer):
         # go through each unit of this layer
         for row_i in range(0, num_rows_units):
             for col_j in range(0, num_cols_units):
-                # find the sum of the input * weight for every pixel in the kernel
-                sub_img = feature_map[row_i:self.kernel_shape[0] + row_i, col_j:self.kernel_shape[1] + col_j]
-                input_dot_weights = numpy.multiply(sub_img, self.W[f][row_i][col_j]) + self.b[f][row_i][col_j]
-                # flatten and sum across all elements
-                output[row_i][col_j] = input_dot_weights.reshape(self.kernel_shape[0] * self.kernel_shape[1]).sum()
+                for input_feature_map in input_feature_maps:
+                    # find the sum of the input * weight for every pixel in the kernel
+                    sub_img = input_feature_map[row_i:self.kernel_shape[0] + row_i, col_j:self.kernel_shape[1] + col_j]
+                    input_dot_weights = numpy.multiply(sub_img, self.W[f][row_i][col_j]) + self.b[f][row_i][col_j]
+                    # flatten and sum across all elements
+                    output[row_i][col_j] += input_dot_weights.reshape(self.kernel_shape[0] * self.kernel_shape[1]).sum()
 
         # here f() is an identity function, so just return a linear transformation
         # output shape is
