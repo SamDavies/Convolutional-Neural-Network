@@ -205,11 +205,14 @@ class ConvLinear(Layer):
                         image_segment = ograds[image_i][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
                         image_segment += unit_delta
 
+        # flatten the image in ograds
+        ograds_flat = ograds.reshape(igrads.shape[0], -1)
+
         # shape of ograds:
         # - batch size
         # - units in this layer
         # shape of deltas same as igrads
-        return deltas, ograds
+        return deltas, ograds_flat
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('ConvLinear.bprop_cost method not implemented')
