@@ -190,8 +190,8 @@ class ConvLinear(Layer):
         """
         deltas = igrads
 
-        # shape the igrades into this layer size
-        deltas_square = igrads.reshape(igrads.shape[0], self.W.shape[1], self.W.shape[2])
+        # shape the igrads into this layer size
+        deltas_square = igrads.reshape(igrads.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2])
 
         ograds = numpy.zeros((igrads.shape[0], self.image_shape[0], self.image_shape[1]), dtype=numpy.float32)
 
@@ -201,7 +201,9 @@ class ConvLinear(Layer):
             for row_u in range(0, self.W.shape[1]):
                 # for each col of units in this layer
                 for col_u in range(0, self.W.shape[2]):
-                        unit_delta = deltas_square[image_i][row_u][col_u]
+                    # for each feature map in this layer
+                    for feature_map_f in range(0, self.num_out_feat_maps):
+                        unit_delta = deltas_square[image_i][feature_map_f][row_u][col_u]
                         # find the portion in the image which is effected by this unit
                         image_segment = ograds[image_i][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
                         image_segment += unit_delta
@@ -229,11 +231,11 @@ class ConvLinear(Layer):
         :param l2_weight:
         :return:
         """
-        # shape the input into an image
-        inputs = inputs.reshape((inputs.shape[0], self.image_shape[0], self.image_shape[1]))
+        # shape the input into - batch_size X output_feature_maps X image_x X image_y
+        inputs = inputs.reshape((inputs.shape[0], self.num_inp_feat_maps, self.image_shape[0], self.image_shape[1]))
 
-        # shape the deltas into row by cols for units of this layer
-        deltas = deltas.reshape((deltas.shape[0], self.W.shape[1], self.W.shape[2]))
+        # shape the deltas into - batch_size X input_feature_maps X unit_rows X unit_cols
+        deltas = deltas.reshape((deltas.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2]))
 
         # you could basically use different scalers for biases
         # and weights, but it is not implemented here like this
@@ -257,13 +259,14 @@ class ConvLinear(Layer):
             for col_u in range(0, self.W.shape[2]):
                 # for each image
                 for image_i in range(0, inputs.shape[0]):
-                    unit_delta = deltas[image_i][row_u][col_u]
-                    input_kernel = inputs[image_i][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
-                    grad_W[0][row_u][col_u] += input_kernel * unit_delta
+                    for feature_map_f in range(0, self.num_out_feat_maps):
+                        unit_delta = deltas[image_i][feature_map_f][row_u][col_u]
+                        input_kernel = inputs[image_i][0][row_u:self.kernel_shape[0] + row_u, col_u:self.kernel_shape[1] + col_u]
+                        grad_W[feature_map_f][row_u][col_u] += input_kernel * unit_delta
 
         grad_b_flat = numpy.sum(deltas, axis=0) + l2_b_penalty + l1_b_penalty
         # make the gradients for the bias square
-        grad_b = grad_b_flat.reshape((self.b.shape[1], self.b.shape[1]))
+        grad_b = grad_b_flat.reshape(self.b.shape)
 
         return [grad_W, grad_b]
 
