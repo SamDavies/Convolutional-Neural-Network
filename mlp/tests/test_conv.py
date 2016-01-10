@@ -374,6 +374,6 @@ class ConvLinearTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.136, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.149, delta=0.005)
 
 
