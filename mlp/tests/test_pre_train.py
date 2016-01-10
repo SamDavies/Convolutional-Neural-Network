@@ -37,8 +37,8 @@ class CrossEntropyTestCase(TestCase):
     def test_pretrain(self):
         """ Ensure that """
         # Given
-        train_dp = MNISTDataProvider(dset='train', batch_size=100, max_num_batches=1, randomize=True)
-        valid_dp = MNISTDataProvider(dset='valid', batch_size=100, max_num_batches=1, randomize=False)
+        train_dp = MNISTDataProvider(dset='train', batch_size=88, max_num_batches=1, randomize=True)
+        valid_dp = MNISTDataProvider(dset='valid', batch_size=88, max_num_batches=1, randomize=False)
 
         train_dp.reset()
         valid_dp.reset()
