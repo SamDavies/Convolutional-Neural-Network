@@ -29,7 +29,6 @@ def convolution_fprop_fast(
     cdef unsigned int num_cols_units = weights.shape[2]
     cdef unsigned int num_input_feature_maps = inputs.shape[1]
     cdef unsigned int b, f, row_i, col_j, ifm, input_feature_map, row_i_plus_kernel, col_j_plus_kernel
-    cdef unsigned int kernal_size = kernel_shape_x * kernel_shape_y
 
     # make the activation tot be the size of the output
     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(
