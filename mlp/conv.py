@@ -84,7 +84,7 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
 
                     sub_inputs = inputs[ifm][0:, row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
                     sub_inputs_w_b = (sub_inputs * sub_weights) + sub_biases
-                    sub_inputs_w_b_flat = sub_inputs_w_b.reshape(sub_inputs_w_b.shape[0], -1)
+                    sub_inputs_w_b_flat = sub_inputs_w_b.reshape(num_batches, -1)
 
                     # sum along axis b
                     sum_along_b = numpy.sum(sub_inputs_w_b_flat, axis=1)
@@ -173,7 +173,7 @@ class ConvLinear(Layer):
         inputs = numpy.array(inputs, dtype=numpy.float32)
         self.W = numpy.array(self.W, dtype=numpy.float32)
         self.b = numpy.array(self.b, dtype=numpy.float32)
-        activations = convolution_fprop_fast(
+        activations = convx.convolution_fprop_fast(
                 self.W, self.b, self.num_out_feat_maps,
                 self.kernel_shape[0], self.kernel_shape[1], inputs
         )

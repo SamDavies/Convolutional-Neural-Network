@@ -40,14 +40,18 @@ def convolution_fprop_fast(
     cdef numpy.ndarray[DTYPE_t, ndim=2] sub_img
     cdef numpy.ndarray[DTYPE_t, ndim=2] input_dot_weights
 
+    activations = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(activations, 1, 0), 2, 1), 3, 2)
+    inputs = numpy.rollaxis(inputs, 1, 0)
+
     for row_i in xrange(0, num_rows_units):
         for col_j in xrange(0, num_cols_units):
             row_i_plus_kernel = kernel_shape_x + row_i
             col_j_plus_kernel = kernel_shape_y + col_j
-            for b in xrange(0, num_batches):
-                for f in xrange(0, num_out_feat_maps):
-                    for ifm in xrange(0, num_input_feature_maps):
-                        activations[b][f][row_i][col_j] += (
-                            (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
-                             * weights[f][row_i][col_j]) + biases[f][row_i][col_j]).sum()
-    return activations
+            for f in xrange(0, num_out_feat_maps):
+                # go through each unit of this layer
+                for ifm in xrange(0, num_input_feature_maps):
+                    activations[f][row_i][col_j] += numpy.sum(
+                            ((inputs[ifm][0:, row_i: row_i_plus_kernel, col_j:col_j_plus_kernel] * weights[f][row_i][col_j])
+                             + biases[f][row_i][col_j]
+                    ).reshape(num_batches, -1), axis=1)
+    return numpy.rollaxis(activations, 3, 0)
