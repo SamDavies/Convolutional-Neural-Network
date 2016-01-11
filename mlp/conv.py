@@ -341,6 +341,7 @@ class ConvRelu(ConvLinear):
     def get_name(self):
         return 'convrelu'
 
+
 class ConvMaxPool2D(Layer):
     def __init__(self,
                  num_feat_maps,
