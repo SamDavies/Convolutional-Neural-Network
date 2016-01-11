@@ -54,3 +54,41 @@ def convolution_fprop_fast(
                              + biases[f][row_i][col_j]
                     ).reshape(num_batches, -1), axis=1)
     return numpy.rollaxis(activations, 3, 0)
+
+
+def convolution_bprop_fast(
+        numpy.ndarray[DTYPE_t, ndim=5] weights,
+        numpy.ndarray[DTYPE_t, ndim=4] deltas,
+        unsigned int image_shape_x,
+        unsigned int image_shape_y,
+        unsigned int num_inp_feat_maps):
+
+    cdef unsigned int num_images = deltas.shape[0]
+
+    cdef unsigned int num_out_feat_maps = weights.shape[0]
+    cdef unsigned int num_rows_units = weights.shape[1]
+    cdef unsigned int num_cols_units = weights.shape[2]
+    cdef unsigned int kernel_shape_x = weights.shape[3]
+    cdef unsigned int kernel_shape_y = weights.shape[4]
+
+    cdef unsigned int inp_feature_map_f, row_u, col_u, kernel_row_end, kernel_col_end, out_feature_map_f
+
+    cdef numpy.ndarray[DTYPE_t, ndim=4] ograds = numpy.zeros(
+            (num_images, num_inp_feat_maps, image_shape_x, image_shape_y), dtype=numpy.float32)
+
+    deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas, 1, 0), 2, 1), 3, 2)
+    ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
+
+    # for each input feature map
+    for inp_feature_map_f in range(0, num_inp_feat_maps):
+        # for each row of units in this layer
+        for row_u in range(0, num_rows_units):
+            # for each col of units in this layer
+            for col_u in range(0, num_cols_units):
+                kernel_row_end = kernel_shape_x + row_u
+                kernel_col_end = kernel_shape_y + col_u
+                # for each feature map in this layer
+                for out_feature_map_f in range(0, num_out_feat_maps):
+                    ograds[inp_feature_map_f][row_u:kernel_row_end,
+                                    col_u:kernel_col_end][0:] += deltas[out_feature_map_f][row_u][col_u][0:]
+    return numpy.rollaxis(ograds, 3, 0)

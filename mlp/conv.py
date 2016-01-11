@@ -92,7 +92,7 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
     return numpy.rollaxis(activations, 3, 0)
 
 
-def convolution_bprop(weights, deltas, image_shape_x, image_shape_y, num_inp_feat_maps):
+def convolution_bprop_fast(weights, deltas, image_shape_x, image_shape_y, num_inp_feat_maps):
     num_images = deltas.shape[0]
 
     num_out_feat_maps = weights.shape[0]
@@ -237,7 +237,9 @@ class ConvLinear(Layer):
         # shape the igrads into this layer size
         deltas_square = igrads.reshape(igrads.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2])
 
-        ograds = convolution_bprop(
+        self.W = numpy.array(self.W, dtype=numpy.float32)
+        deltas_square = numpy.array(deltas_square, dtype=numpy.float32)
+        ograds = convx.convolution_bprop_fast(
                 self.W, deltas_square, self.image_shape[0], self.image_shape[1], self.num_inp_feat_maps
         )
 
