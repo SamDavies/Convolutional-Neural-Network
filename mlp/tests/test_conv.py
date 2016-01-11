@@ -323,5 +323,30 @@ class ConvLinearTestCase(TestCase):
             print("batch done in {}".format(stop - start))
         self.assertTrue(True)
 
+    def test_model_bprop_fast(self):
+        """ Ensure that back prop works when the conv layer has 1 below it """
+        train_dp = MNISTDataProvider(dset='train', batch_size=100, max_num_batches=10, randomize=True)
+        train_dp.reset()
+
+        cost = CECost()
+        model = MLP(cost=cost)
+        model.add_layer(Sigmoid(idim=784, odim=784))
+        model.add_layer(ConvLinear(1, 3, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
+        model.add_layer(ConvLinear(3, 3, image_shape=(24, 24), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
+        model.add_layer(Softmax(idim=1200, odim=10))
+
+        for x, t in train_dp:
+            y = model.fprop(x)
+            # compute the cost and grad of the cost w.r.t y
+            cost = model.cost.cost(y, t)
+            cost_grad = model.cost.grad(y, t)
+            # do backward pass through the model
+            start = time.clock()
+            model.bprop(cost_grad)
+            stop = time.clock()
+
+            print("batch done in {}".format(stop - start))
+        self.assertTrue(True)
+
 
 
