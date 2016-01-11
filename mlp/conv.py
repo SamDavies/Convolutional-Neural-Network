@@ -292,10 +292,54 @@ class ConvLinear(Layer):
         return 'convlinear'
 
 
-# you can derive here particular non-linear implementations:
-# class ConvSigmoid(ConvLinear):
-# ...
+class ConvSigmoid(ConvLinear):
+    def fprop(self, inputs):
+        # get the linear activations
+        a = super(ConvSigmoid, self).fprop(inputs)
+        # stabilise the exp() computation in case some values in
+        # 'a' get very negative.
+        numpy.clip(a, -30.0, 30.0, out=a)
+        h = 1.0 / (1 + numpy.exp(-a))
+        return h
 
+    def bprop(self, h, igrads):
+        h = h.reshape(igrads.shape)
+        dsigm = h * (1.0 - h)
+        deltas = igrads * dsigm
+        ___, ograds = super(ConvSigmoid, self).bprop(h=None, igrads=deltas)
+        return deltas, ograds
+
+    def bprop_cost(self, h, igrads, cost):
+        if cost is None or cost.get_name() == 'bce':
+            return super(ConvSigmoid, self).bprop(h=h, igrads=igrads)
+        else:
+            raise NotImplementedError('Sigmoid.bprop_cost method not implemented '
+                                      'for the %s cost' % cost.get_name())
+
+    def get_name(self):
+        return 'convsigmoid'
+
+
+class ConvRelu(ConvLinear):
+    def fprop(self, inputs):
+        # get the linear activations
+        a = super(ConvRelu, self).fprop(inputs)
+        h = numpy.clip(a, 0, 20.0)
+        # h = numpy.maximum(a, 0)
+        return h
+
+    def bprop(self, h, igrads):
+        h = h.reshape(igrads.shape)
+        deltas = (h > 0) * igrads
+        ___, ograds = super(ConvRelu, self).bprop(h=None, igrads=deltas)
+        return deltas, ograds
+
+    def bprop_cost(self, h, igrads, cost):
+        raise NotImplementedError('Relu.bprop_cost method not implemented '
+                                  'for the %s cost' % cost.get_name())
+
+    def get_name(self):
+        return 'convrelu'
 
 class ConvMaxPool2D(Layer):
     def __init__(self,
