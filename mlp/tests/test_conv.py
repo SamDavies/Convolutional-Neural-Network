@@ -19,30 +19,13 @@ class FeatureMapTestCase(TestCase):
         self.rng_state = self.rng.get_state()
 
     def test_create_linear(self):
-        conv = ConvLinear(1, 1,
-                          image_shape=(28, 28),
-                          kernel_shape=(5, 5),
-                          stride=(1, 1),
-                          irange=0.2,
-                          rng=None,
-                          conv_fwd=None,
-                          conv_bck=None,
-                          conv_grad=None)
+        conv = ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
         weights = conv.W[0]
         self.assertEqual(weights.shape, (24, 24, 5, 5))
 
     def test_fprop_for_1_iamge(self):
         """ Ensure that 1 forward prop pass works for 1 image """
-        conv = ConvLinear(1, 1,
-                          image_shape=(28, 28),
-                          kernel_shape=(5, 5),
-                          stride=(1, 1),
-                          irange=0.2,
-                          rng=None,
-                          conv_fwd=None,
-                          conv_bck=None,
-                          conv_grad=None)
-
+        conv = ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
         conv.W = numpy.ones(conv.W.shape, dtype=numpy.float32)
 
         # make an image of zeros with 1 in 2 corners
@@ -68,16 +51,7 @@ class FeatureMapTestCase(TestCase):
 
     def test_fprop(self):
         """ Ensure that 1 forward prop pass works """
-        conv = ConvLinear(1, 1,
-                          image_shape=(28, 28),
-                          kernel_shape=(5, 5),
-                          stride=(1, 1),
-                          irange=0.2,
-                          rng=None,
-                          conv_fwd=None,
-                          conv_bck=None,
-                          conv_grad=None)
-
+        conv = ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
         conv.W = numpy.ones(conv.W.shape, dtype=numpy.float32)
 
         # make an image of zeros with 1 in 2 corners
@@ -105,16 +79,7 @@ class FeatureMapTestCase(TestCase):
 
     def test_fprop_from_2d_layer(self):
         """ Ensure that 1 forward prop pass works """
-        conv = ConvLinear(1, 1,
-                          image_shape=(28, 28),
-                          kernel_shape=(5, 5),
-                          stride=(1, 1),
-                          irange=0.2,
-                          rng=None,
-                          conv_fwd=None,
-                          conv_bck=None,
-                          conv_grad=None)
-
+        conv = ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
         conv.W = numpy.ones(conv.W.shape, dtype=numpy.float32)
 
         # make an image of zeros with 1 in 2 corners
@@ -139,16 +104,7 @@ class FeatureMapTestCase(TestCase):
 
     def test_fprop_many_out_feature_maps(self):
         """ Ensure that 1 forward prop pass works with many out feature maps """
-        conv = ConvLinear(1, 2,
-                          image_shape=(28, 28),
-                          kernel_shape=(5, 5),
-                          stride=(1, 1),
-                          irange=0.2,
-                          rng=None,
-                          conv_fwd=None,
-                          conv_bck=None,
-                          conv_grad=None)
-
+        conv = ConvLinear(1, 2, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
         conv.W = numpy.ones(conv.W.shape, dtype=numpy.float32)
 
         # make an image of zeros with 1 in 2 corners
@@ -179,15 +135,7 @@ class FeatureMapTestCase(TestCase):
 
     def test_fprop_many_inp_feature_maps(self):
         """ Ensure that 1 forward prop pass works with many out feature maps """
-        conv = ConvLinear(2, 1,
-                          image_shape=(28, 28),
-                          kernel_shape=(5, 5),
-                          stride=(1, 1),
-                          irange=0.2,
-                          rng=None,
-                          conv_fwd=None,
-                          conv_bck=None,
-                          conv_grad=None)
+        conv = ConvLinear(2, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
 
         conv.W = numpy.ones(conv.W.shape, dtype=numpy.float32)
 
@@ -220,17 +168,7 @@ class ConvLinearTestCase(TestCase):
         """ Ensure that 1 forward prop pass works """
         cost = CECost()
         model = MLP(cost=cost)
-        model.add_layer(
-                ConvLinear(1, 1,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5),stride=(1, 1),irange=0.2))
         model.add_layer(Linear(idim=576, odim=2))
 
         model.layers[0].W = numpy.ones(model.layers[0].W.shape, dtype=numpy.float32)
@@ -255,17 +193,7 @@ class ConvLinearTestCase(TestCase):
         """ Ensure that 1 forward prop pass works """
         cost = CECost()
         model = MLP(cost=cost)
-        model.add_layer(
-                ConvLinear(1, 2,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 2, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
         model.add_layer(Linear(idim=1152, odim=2))
 
         model.layers[0].W = numpy.ones(model.layers[0].W.shape, dtype=numpy.float32)
@@ -295,17 +223,7 @@ class ConvLinearTestCase(TestCase):
 
         cost = CECost()
         model = MLP(cost=cost)
-        model.add_layer(
-                ConvLinear(1, 1,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
         model.add_layer(Softmax(idim=576, odim=10))
 
         lr_scheduler = LearningRateFixed(learning_rate=0.5, max_epochs=2)
@@ -328,17 +246,7 @@ class ConvLinearTestCase(TestCase):
         cost = CECost()
         model = MLP(cost=cost)
         model.add_layer(Sigmoid(idim=784, odim=784))
-        model.add_layer(
-                ConvLinear(1, 1,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 1,image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
         model.add_layer(Softmax(idim=576, odim=10))
 
         lr_scheduler = LearningRateFixed(learning_rate=0.5, max_epochs=2)
@@ -361,17 +269,7 @@ class ConvLinearTestCase(TestCase):
         cost = CECost()
         model = MLP(cost=cost)
         model.add_layer(Sigmoid(idim=784, odim=784))
-        model.add_layer(
-                ConvLinear(1, 3,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 3, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
         model.add_layer(Softmax(idim=1728, odim=10))
 
         lr_scheduler = LearningRateFixed(learning_rate=0.5, max_epochs=2)
@@ -393,28 +291,8 @@ class ConvLinearTestCase(TestCase):
         cost = CECost()
         model = MLP(cost=cost)
         model.add_layer(Sigmoid(idim=784, odim=784))
-        model.add_layer(
-                ConvLinear(1, 3,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
-        model.add_layer(
-                ConvLinear(3, 3,
-                           image_shape=(24, 24),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 3, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
+        model.add_layer(ConvLinear(3, 3, image_shape=(24, 24), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
         model.add_layer(Softmax(idim=1200, odim=10))
 
         lr_scheduler = LearningRateFixed(learning_rate=0.5, max_epochs=2)
@@ -434,28 +312,8 @@ class ConvLinearTestCase(TestCase):
         cost = CECost()
         model = MLP(cost=cost)
         model.add_layer(Sigmoid(idim=784, odim=784))
-        model.add_layer(
-                ConvLinear(1, 3,
-                           image_shape=(28, 28),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
-        model.add_layer(
-                ConvLinear(3, 3,
-                           image_shape=(24, 24),
-                           kernel_shape=(5, 5),
-                           stride=(1, 1),
-                           irange=0.2,
-                           rng=None,
-                           conv_fwd=None,
-                           conv_bck=None,
-                           conv_grad=None)
-        )
+        model.add_layer(ConvLinear(1, 3, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
+        model.add_layer(ConvLinear(3, 3, image_shape=(24, 24), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
         model.add_layer(Softmax(idim=1200, odim=10))
 
         for x, t in train_dp:
@@ -464,5 +322,6 @@ class ConvLinearTestCase(TestCase):
             stop = time.clock()
             print("batch done in {}".format(stop - start))
         self.assertTrue(True)
+
 
 
