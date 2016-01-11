@@ -28,10 +28,11 @@ def convolution_fprop_fast(
     cdef unsigned int num_rows_units = weights.shape[1]
     cdef unsigned int num_cols_units = weights.shape[2]
     cdef unsigned int num_input_feature_maps = inputs.shape[1]
-    cdef unsigned int b, f, row_i, col_j, ifm, input_feature_map
+    cdef unsigned int b, f, row_i, col_j, ifm, input_feature_map, row_i_plus_kernel, col_j_plus_kernel
+    cdef unsigned int kernal_size = kernel_shape_x * kernel_shape_y
 
     # make the activation tot be the size of the output
-    cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.empty(
+    cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(
             (num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
 
     cdef numpy.ndarray[DTYPE_t, ndim=2] output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
@@ -39,21 +40,14 @@ def convolution_fprop_fast(
     cdef numpy.ndarray[DTYPE_t, ndim=2] sub_img
     cdef numpy.ndarray[DTYPE_t, ndim=2] input_dot_weights
 
-    for b in xrange(0, num_batches):
-        for f in xrange(0, num_out_feat_maps):
-            """ Given an image calculate the fprop for 1 feature maps """
-            output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
-            # go through each unit of this layer
-            for row_i in range(0, num_rows_units):
-                for col_j in range(0, num_cols_units):
+    for row_i in xrange(0, num_rows_units):
+        for col_j in xrange(0, num_cols_units):
+            row_i_plus_kernel = kernel_shape_x + row_i
+            col_j_plus_kernel = kernel_shape_y + col_j
+            for b in xrange(0, num_batches):
+                for f in xrange(0, num_out_feat_maps):
                     for ifm in xrange(0, num_input_feature_maps):
-                        # find the sum of the input * weight for every pixel in the kernel
-                        sub_img = inputs[b][ifm][row_i:kernel_shape_x + row_i, col_j:kernel_shape_y + col_j]
-                        input_dot_weights = numpy.multiply(sub_img, weights[f][row_i][col_j]) + biases[f][row_i][col_j]
-                        # flatten and sum across all elements
-                        output[row_i][col_j] += input_dot_weights.reshape(kernel_shape_x * kernel_shape_y).sum()
-            # output shape is
-            # - number of rows of units in this layer
-            # - number of cols of units in this layer
-            activations[b][f] = output
+                        activations[b][f][row_i][col_j] += (
+                            (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
+                             * weights[f][row_i][col_j]) + biases[f][row_i][col_j]).sum()
     return activations

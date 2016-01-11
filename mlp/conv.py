@@ -38,14 +38,15 @@ def convolution_fprop(weights, biases, num_out_feat_maps, kernel_shape_x, kernel
     for b in xrange(0, num_batches):
         for f in xrange(0, num_out_feat_maps):
             # go through each unit of this layer
-            for row_i in xrange(0, num_rows_units):
-                for col_j in xrange(0, num_cols_units):
-                    for ifm in xrange(0, num_input_feature_maps):
+            for ifm in xrange(0, num_input_feature_maps):
+                for row_i in xrange(0, num_rows_units):
+                    for col_j in xrange(0, num_cols_units):
                         # find the sum of the input * weight for every pixel in the kernel
                         sub_img = inputs[b][ifm][row_i:kernel_shape_x + row_i, col_j:kernel_shape_y + col_j]
                         input_dot_weights = numpy.multiply(sub_img, weights[f][row_i][col_j]) + biases[f][row_i][col_j]
                         # flatten and sum across all elements
-                        activations[b][f][row_i][col_j] += input_dot_weights.reshape(kernel_shape_x * kernel_shape_y).sum()
+                        activations[b][f][row_i][col_j] += input_dot_weights.reshape(
+                            kernel_shape_x * kernel_shape_y).sum()
     return activations
 
 
@@ -63,20 +64,24 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
     num_rows_units = weights.shape[1]
     num_cols_units = weights.shape[2]
     num_input_feature_maps = inputs.shape[1]
+    kernal_size = kernel_shape_x * kernel_shape_y
 
     # make the activation to be the size of the output
     activations = numpy.zeros((num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
-    for b in xrange(0, num_batches):
-        for f in xrange(0, num_out_feat_maps):
-            # go through each unit of this layer
-            for row_i in xrange(0, num_rows_units):
-                for col_j in xrange(0, num_cols_units):
+
+    for row_i in xrange(0, num_rows_units):
+        for col_j in xrange(0, num_cols_units):
+            row_i_plus_kernel = kernel_shape_x + row_i
+            col_j_plus_kernel = kernel_shape_y + col_j
+            for b in xrange(0, num_batches):
+                for f in xrange(0, num_out_feat_maps):
+                    # go through each unit of this layer
                     for ifm in xrange(0, num_input_feature_maps):
                         # find the sum of the input * weight for every pixel in the kernel
-                        sub_img = inputs[b][ifm][row_i:kernel_shape_x + row_i, col_j:kernel_shape_y + col_j]
-                        input_dot_weights = numpy.multiply(sub_img, weights[f][row_i][col_j]) + biases[f][row_i][col_j]
                         # flatten and sum across all elements
-                        activations[b][f][row_i][col_j] += input_dot_weights.reshape(kernel_shape_x * kernel_shape_y).sum()
+                        activations[b][f][row_i][col_j] += (
+                            (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
+                             * weights[f][row_i][col_j]) + biases[f][row_i][col_j]).sum()
     return activations
 
 
@@ -156,9 +161,11 @@ class ConvLinear(Layer):
 
         # reshape the pixels to be 2D making 4D inputs
         inputs = inputs.reshape((inputs.shape[0], inputs.shape[1], self.image_shape[0], self.image_shape[1]))
-        inputs = numpy.array(inputs, dtype=numpy.float32)
 
-        activations = convolution_fprop_fast(
+        inputs = numpy.array(inputs, dtype=numpy.float32)
+        self.W = numpy.array(self.W, dtype=numpy.float32)
+        self.b = numpy.array(self.b, dtype=numpy.float32)
+        activations = convx.convolution_fprop_fast(
                 self.W, self.b, self.num_out_feat_maps,
                 self.kernel_shape[0], self.kernel_shape[1], inputs
         )

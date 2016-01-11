@@ -428,12 +428,13 @@ class ConvLinearTestCase(TestCase):
 
     def test_model_fprop_fast(self):
         """ Ensure that back prop works when the conv layer has 1 below it """
-        train_dp = MNISTDataProvider(dset='train', batch_size=100, max_num_batches=-10, randomize=True)
+        train_dp = MNISTDataProvider(dset='train', batch_size=100, max_num_batches=10, randomize=True)
+        valid_dp = MNISTDataProvider(dset='valid', batch_size=100, max_num_batches=1, randomize=True)
+        test_dp = MNISTDataProvider(dset='eval', batch_size=100, max_num_batches=1, randomize=True)
         train_dp.reset()
 
         cost = CECost()
         model = MLP(cost=cost)
-        model.add_layer(Sigmoid(idim=784, odim=784))
         model.add_layer(
                 ConvLinear(1, 3,
                            image_shape=(28, 28),
@@ -458,11 +459,15 @@ class ConvLinearTestCase(TestCase):
         )
         model.add_layer(Softmax(idim=1200, odim=10))
 
-        for x, t in train_dp:
-            start = time.clock()
-            y = model.fprop(x)
-            stop = time.clock()
-            print("batch done in {}".format(stop - start))
+        lr_scheduler = LearningRateFixed(learning_rate=0.5, max_epochs=1)
+        optimiser = SGDOptimiser(lr_scheduler=lr_scheduler, dp_scheduler=None, l1_weight=0.0, l2_weight=0.0)
+
+        start = time.clock()
+        optimiser.train(model, train_dp, valid_iterator=valid_dp)
+        stop = time.clock()
+        print(stop - start)
+
+        tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
         self.assertTrue(True)
 
 
