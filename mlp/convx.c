@@ -234,8 +234,8 @@ static CYTHON_INLINE float __PYX_NAN() {
   #endif
 #endif
 
-#define __PYX_HAVE__convx
-#define __PYX_HAVE_API__convx
+#define __PYX_HAVE__mlp__convx
+#define __PYX_HAVE_API__mlp__convx
 #include "string.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -470,7 +470,7 @@ static const char *__pyx_filename;
 
 
 static const char *__pyx_f[] = {
-  "convx.pyx",
+  "mlp/convx.pyx",
   "__init__.pxd",
   "type.pxd",
 };
@@ -699,14 +699,14 @@ typedef npy_double __pyx_t_5numpy_double_t;
  */
 typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
 
-/* "convx.pyx":6
+/* "mlp/convx.pyx":6
  * DTYPE = numpy.float32
  * 
  * ctypedef numpy.float32_t DTYPE_t             # <<<<<<<<<<<<<<
  * 
  * 
  */
-typedef __pyx_t_5numpy_float32_t __pyx_t_5convx_DTYPE_t;
+typedef __pyx_t_5numpy_float32_t __pyx_t_3mlp_5convx_DTYPE_t;
 #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
     typedef ::std::complex< float > __pyx_t_float_complex;
@@ -1147,12 +1147,12 @@ static PyTypeObject *__pyx_ptype_5numpy_ndarray = 0;
 static PyTypeObject *__pyx_ptype_5numpy_ufunc = 0;
 static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *, char *, char *, int *); /*proto*/
 
-/* Module declarations from 'convx' */
-static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_5convx_DTYPE_t = { "DTYPE_t", NULL, sizeof(__pyx_t_5convx_DTYPE_t), { 0 }, 0, 'R', 0, 0 };
-#define __Pyx_MODULE_NAME "convx"
-int __pyx_module_is_main_convx = 0;
+/* Module declarations from 'mlp.convx' */
+static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_3mlp_5convx_DTYPE_t = { "DTYPE_t", NULL, sizeof(__pyx_t_3mlp_5convx_DTYPE_t), { 0 }, 0, 'R', 0, 0 };
+#define __Pyx_MODULE_NAME "mlp.convx"
+int __pyx_module_is_main_mlp__convx = 0;
 
-/* Implementation of 'convx' */
+/* Implementation of 'mlp.convx' */
 static PyObject *__pyx_builtin_xrange;
 static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_range;
@@ -1180,7 +1180,6 @@ static char __pyx_k_main[] = "__main__";
 static char __pyx_k_test[] = "__test__";
 static char __pyx_k_DTYPE[] = "DTYPE";
 static char __pyx_k_col_j[] = "col_j";
-static char __pyx_k_convx[] = "convx";
 static char __pyx_k_dtype[] = "dtype";
 static char __pyx_k_numpy[] = "numpy";
 static char __pyx_k_range[] = "range";
@@ -1194,6 +1193,7 @@ static char __pyx_k_xrange[] = "xrange";
 static char __pyx_k_float32[] = "float32";
 static char __pyx_k_sub_img[] = "sub_img";
 static char __pyx_k_weights[] = "weights";
+static char __pyx_k_mlp_convx[] = "mlp.convx";
 static char __pyx_k_ValueError[] = "ValueError";
 static char __pyx_k_activations[] = "activations";
 static char __pyx_k_kernal_size[] = "kernal_size";
@@ -1230,7 +1230,6 @@ static PyObject *__pyx_n_s_biases;
 static PyObject *__pyx_n_s_col_j;
 static PyObject *__pyx_n_s_col_j_plus_kernel;
 static PyObject *__pyx_n_s_convolution_fprop_fast;
-static PyObject *__pyx_n_s_convx;
 static PyObject *__pyx_n_s_dtype;
 static PyObject *__pyx_n_s_f;
 static PyObject *__pyx_n_s_float32;
@@ -1243,6 +1242,7 @@ static PyObject *__pyx_n_s_kernal_size;
 static PyObject *__pyx_n_s_kernel_shape_x;
 static PyObject *__pyx_n_s_kernel_shape_y;
 static PyObject *__pyx_n_s_main;
+static PyObject *__pyx_n_s_mlp_convx;
 static PyObject *__pyx_kp_u_ndarray_is_not_C_contiguous;
 static PyObject *__pyx_kp_u_ndarray_is_not_Fortran_contiguou;
 static PyObject *__pyx_n_s_num_batches;
@@ -1262,7 +1262,7 @@ static PyObject *__pyx_kp_u_unknown_dtype_code_in_numpy_pxd;
 static PyObject *__pyx_n_s_weights;
 static PyObject *__pyx_n_s_xrange;
 static PyObject *__pyx_n_s_zeros;
-static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_weights, PyArrayObject *__pyx_v_biases, unsigned int __pyx_v_num_out_feat_maps, unsigned int __pyx_v_kernel_shape_x, unsigned int __pyx_v_kernel_shape_y, PyArrayObject *__pyx_v_inputs); /* proto */
+static PyObject *__pyx_pf_3mlp_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_weights, PyArrayObject *__pyx_v_biases, unsigned int __pyx_v_num_out_feat_maps, unsigned int __pyx_v_kernel_shape_x, unsigned int __pyx_v_kernel_shape_y, PyArrayObject *__pyx_v_inputs); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static PyObject *__pyx_tuple_;
@@ -1274,7 +1274,7 @@ static PyObject *__pyx_tuple__6;
 static PyObject *__pyx_tuple__7;
 static PyObject *__pyx_codeobj__8;
 
-/* "convx.pyx":9
+/* "mlp/convx.pyx":9
  * 
  * 
  * def convolution_fprop_fast(             # <<<<<<<<<<<<<<
@@ -1283,10 +1283,10 @@ static PyObject *__pyx_codeobj__8;
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_5convx_1convolution_fprop_fast(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_5convx_convolution_fprop_fast[] = "\n    Implements a forward propagation for a convolution layer\n    Note: filer means the same as kernel and convolution (correlation) of those with the input space\n    produces feature maps (sometimes refereed to also as receptive fields). Also note, that\n    feature maps are synonyms here to channels, and as such num_inp_channels == num_inp_feat_maps\n    :param layer: the convolution layer\n    :param inputs: 4D tensor of size (batch_size, num_out_feature_maps, num_rows_in_image, num_cols_in_image)\n    :return: 4D tensor of size (batch_size, num_in_feature_maps, num_rows_in_layer, num_cols_in_layer)\n    ";
-static PyMethodDef __pyx_mdef_5convx_1convolution_fprop_fast = {"convolution_fprop_fast", (PyCFunction)__pyx_pw_5convx_1convolution_fprop_fast, METH_VARARGS|METH_KEYWORDS, __pyx_doc_5convx_convolution_fprop_fast};
-static PyObject *__pyx_pw_5convx_1convolution_fprop_fast(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_3mlp_5convx_1convolution_fprop_fast(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_3mlp_5convx_convolution_fprop_fast[] = "\n    Implements a forward propagation for a convolution layer\n    Note: filer means the same as kernel and convolution (correlation) of those with the input space\n    produces feature maps (sometimes refereed to also as receptive fields). Also note, that\n    feature maps are synonyms here to channels, and as such num_inp_channels == num_inp_feat_maps\n    :param layer: the convolution layer\n    :param inputs: 4D tensor of size (batch_size, num_out_feature_maps, num_rows_in_image, num_cols_in_image)\n    :return: 4D tensor of size (batch_size, num_in_feature_maps, num_rows_in_layer, num_cols_in_layer)\n    ";
+static PyMethodDef __pyx_mdef_3mlp_5convx_1convolution_fprop_fast = {"convolution_fprop_fast", (PyCFunction)__pyx_pw_3mlp_5convx_1convolution_fprop_fast, METH_VARARGS|METH_KEYWORDS, __pyx_doc_3mlp_5convx_convolution_fprop_fast};
+static PyObject *__pyx_pw_3mlp_5convx_1convolution_fprop_fast(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_weights = 0;
   PyArrayObject *__pyx_v_biases = 0;
   unsigned int __pyx_v_num_out_feat_maps;
@@ -1370,14 +1370,14 @@ static PyObject *__pyx_pw_5convx_1convolution_fprop_fast(PyObject *__pyx_self, P
   __pyx_L5_argtuple_error:;
   __Pyx_RaiseArgtupleInvalid("convolution_fprop_fast", 1, 6, 6, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
-  __Pyx_AddTraceback("convx.convolution_fprop_fast", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("mlp.convx.convolution_fprop_fast", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_weights), __pyx_ptype_5numpy_ndarray, 1, "weights", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 10; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_biases), __pyx_ptype_5numpy_ndarray, 1, "biases", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 11; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_inputs), __pyx_ptype_5numpy_ndarray, 1, "inputs", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_r = __pyx_pf_5convx_convolution_fprop_fast(__pyx_self, __pyx_v_weights, __pyx_v_biases, __pyx_v_num_out_feat_maps, __pyx_v_kernel_shape_x, __pyx_v_kernel_shape_y, __pyx_v_inputs);
+  __pyx_r = __pyx_pf_3mlp_5convx_convolution_fprop_fast(__pyx_self, __pyx_v_weights, __pyx_v_biases, __pyx_v_num_out_feat_maps, __pyx_v_kernel_shape_x, __pyx_v_kernel_shape_y, __pyx_v_inputs);
 
   /* function exit code */
   goto __pyx_L0;
@@ -1388,7 +1388,7 @@ static PyObject *__pyx_pw_5convx_1convolution_fprop_fast(PyObject *__pyx_self, P
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_weights, PyArrayObject *__pyx_v_biases, unsigned int __pyx_v_num_out_feat_maps, unsigned int __pyx_v_kernel_shape_x, unsigned int __pyx_v_kernel_shape_y, PyArrayObject *__pyx_v_inputs) {
+static PyObject *__pyx_pf_3mlp_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_weights, PyArrayObject *__pyx_v_biases, unsigned int __pyx_v_num_out_feat_maps, unsigned int __pyx_v_kernel_shape_x, unsigned int __pyx_v_kernel_shape_y, PyArrayObject *__pyx_v_inputs) {
   unsigned int __pyx_v_num_batches;
   unsigned int __pyx_v_num_rows_units;
   unsigned int __pyx_v_num_cols_units;
@@ -1464,21 +1464,21 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_pybuffernd_inputs.rcbuffer = &__pyx_pybuffer_inputs;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_weights.rcbuffer->pybuffer, (PyObject*)__pyx_v_weights, &__Pyx_TypeInfo_nn___pyx_t_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 5, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_weights.rcbuffer->pybuffer, (PyObject*)__pyx_v_weights, &__Pyx_TypeInfo_nn___pyx_t_3mlp_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 5, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __pyx_pybuffernd_weights.diminfo[0].strides = __pyx_pybuffernd_weights.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_weights.diminfo[0].shape = __pyx_pybuffernd_weights.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_weights.diminfo[1].strides = __pyx_pybuffernd_weights.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_weights.diminfo[1].shape = __pyx_pybuffernd_weights.rcbuffer->pybuffer.shape[1]; __pyx_pybuffernd_weights.diminfo[2].strides = __pyx_pybuffernd_weights.rcbuffer->pybuffer.strides[2]; __pyx_pybuffernd_weights.diminfo[2].shape = __pyx_pybuffernd_weights.rcbuffer->pybuffer.shape[2]; __pyx_pybuffernd_weights.diminfo[3].strides = __pyx_pybuffernd_weights.rcbuffer->pybuffer.strides[3]; __pyx_pybuffernd_weights.diminfo[3].shape = __pyx_pybuffernd_weights.rcbuffer->pybuffer.shape[3]; __pyx_pybuffernd_weights.diminfo[4].strides = __pyx_pybuffernd_weights.rcbuffer->pybuffer.strides[4]; __pyx_pybuffernd_weights.diminfo[4].shape = __pyx_pybuffernd_weights.rcbuffer->pybuffer.shape[4];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_biases.rcbuffer->pybuffer, (PyObject*)__pyx_v_biases, &__Pyx_TypeInfo_nn___pyx_t_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 3, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_biases.rcbuffer->pybuffer, (PyObject*)__pyx_v_biases, &__Pyx_TypeInfo_nn___pyx_t_3mlp_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 3, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __pyx_pybuffernd_biases.diminfo[0].strides = __pyx_pybuffernd_biases.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_biases.diminfo[0].shape = __pyx_pybuffernd_biases.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_biases.diminfo[1].strides = __pyx_pybuffernd_biases.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_biases.diminfo[1].shape = __pyx_pybuffernd_biases.rcbuffer->pybuffer.shape[1]; __pyx_pybuffernd_biases.diminfo[2].strides = __pyx_pybuffernd_biases.rcbuffer->pybuffer.strides[2]; __pyx_pybuffernd_biases.diminfo[2].shape = __pyx_pybuffernd_biases.rcbuffer->pybuffer.shape[2];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_inputs.rcbuffer->pybuffer, (PyObject*)__pyx_v_inputs, &__Pyx_TypeInfo_nn___pyx_t_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 4, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_inputs.rcbuffer->pybuffer, (PyObject*)__pyx_v_inputs, &__Pyx_TypeInfo_nn___pyx_t_3mlp_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 4, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __pyx_pybuffernd_inputs.diminfo[0].strides = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_inputs.diminfo[0].shape = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_inputs.diminfo[1].strides = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_inputs.diminfo[1].shape = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.shape[1]; __pyx_pybuffernd_inputs.diminfo[2].strides = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.strides[2]; __pyx_pybuffernd_inputs.diminfo[2].shape = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.shape[2]; __pyx_pybuffernd_inputs.diminfo[3].strides = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.strides[3]; __pyx_pybuffernd_inputs.diminfo[3].shape = __pyx_pybuffernd_inputs.rcbuffer->pybuffer.shape[3];
 
-  /* "convx.pyx":25
+  /* "mlp/convx.pyx":25
  *     :return: 4D tensor of size (batch_size, num_in_feature_maps, num_rows_in_layer, num_cols_in_layer)
  *     """
  *     assert weights.dtype == DTYPE and inputs.dtype == DTYPE             # <<<<<<<<<<<<<<
@@ -1519,7 +1519,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   }
   #endif
 
-  /* "convx.pyx":27
+  /* "mlp/convx.pyx":27
  *     assert weights.dtype == DTYPE and inputs.dtype == DTYPE
  * 
  *     cdef unsigned int num_batches = inputs.shape[0]             # <<<<<<<<<<<<<<
@@ -1528,7 +1528,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
   __pyx_v_num_batches = (__pyx_v_inputs->dimensions[0]);
 
-  /* "convx.pyx":28
+  /* "mlp/convx.pyx":28
  * 
  *     cdef unsigned int num_batches = inputs.shape[0]
  *     cdef unsigned int num_rows_units = weights.shape[1]             # <<<<<<<<<<<<<<
@@ -1537,7 +1537,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
   __pyx_v_num_rows_units = (__pyx_v_weights->dimensions[1]);
 
-  /* "convx.pyx":29
+  /* "mlp/convx.pyx":29
  *     cdef unsigned int num_batches = inputs.shape[0]
  *     cdef unsigned int num_rows_units = weights.shape[1]
  *     cdef unsigned int num_cols_units = weights.shape[2]             # <<<<<<<<<<<<<<
@@ -1546,7 +1546,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
   __pyx_v_num_cols_units = (__pyx_v_weights->dimensions[2]);
 
-  /* "convx.pyx":30
+  /* "mlp/convx.pyx":30
  *     cdef unsigned int num_rows_units = weights.shape[1]
  *     cdef unsigned int num_cols_units = weights.shape[2]
  *     cdef unsigned int num_input_feature_maps = inputs.shape[1]             # <<<<<<<<<<<<<<
@@ -1555,7 +1555,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
   __pyx_v_num_input_feature_maps = (__pyx_v_inputs->dimensions[1]);
 
-  /* "convx.pyx":32
+  /* "mlp/convx.pyx":32
  *     cdef unsigned int num_input_feature_maps = inputs.shape[1]
  *     cdef unsigned int b, f, row_i, col_j, ifm, input_feature_map, row_i_plus_kernel, col_j_plus_kernel
  *     cdef unsigned int kernal_size = kernel_shape_x * kernel_shape_y             # <<<<<<<<<<<<<<
@@ -1564,7 +1564,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
   __pyx_v_kernal_size = (__pyx_v_kernel_shape_x * __pyx_v_kernel_shape_y);
 
-  /* "convx.pyx":35
+  /* "mlp/convx.pyx":35
  * 
  *     # make the activation tot be the size of the output
  *     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(             # <<<<<<<<<<<<<<
@@ -1577,7 +1577,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "convx.pyx":36
+  /* "mlp/convx.pyx":36
  *     # make the activation tot be the size of the output
  *     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(
  *             (num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)             # <<<<<<<<<<<<<<
@@ -1607,7 +1607,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_t_6 = 0;
   __pyx_t_7 = 0;
 
-  /* "convx.pyx":35
+  /* "mlp/convx.pyx":35
  * 
  *     # make the activation tot be the size of the output
  *     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(             # <<<<<<<<<<<<<<
@@ -1620,7 +1620,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_8);
   __pyx_t_8 = 0;
 
-  /* "convx.pyx":36
+  /* "mlp/convx.pyx":36
  *     # make the activation tot be the size of the output
  *     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(
  *             (num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)             # <<<<<<<<<<<<<<
@@ -1637,7 +1637,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_dtype, __pyx_t_4) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 36; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "convx.pyx":35
+  /* "mlp/convx.pyx":35
  * 
  *     # make the activation tot be the size of the output
  *     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(             # <<<<<<<<<<<<<<
@@ -1653,7 +1653,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_t_9 = ((PyArrayObject *)__pyx_t_4);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_activations.rcbuffer->pybuffer, (PyObject*)__pyx_t_9, &__Pyx_TypeInfo_nn___pyx_t_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 4, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_activations.rcbuffer->pybuffer, (PyObject*)__pyx_t_9, &__Pyx_TypeInfo_nn___pyx_t_3mlp_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 4, 0, __pyx_stack) == -1)) {
       __pyx_v_activations = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_activations.rcbuffer->pybuffer.buf = NULL;
       {__pyx_filename = __pyx_f[0]; __pyx_lineno = 35; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     } else {__pyx_pybuffernd_activations.diminfo[0].strides = __pyx_pybuffernd_activations.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_activations.diminfo[0].shape = __pyx_pybuffernd_activations.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_activations.diminfo[1].strides = __pyx_pybuffernd_activations.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_activations.diminfo[1].shape = __pyx_pybuffernd_activations.rcbuffer->pybuffer.shape[1]; __pyx_pybuffernd_activations.diminfo[2].strides = __pyx_pybuffernd_activations.rcbuffer->pybuffer.strides[2]; __pyx_pybuffernd_activations.diminfo[2].shape = __pyx_pybuffernd_activations.rcbuffer->pybuffer.shape[2]; __pyx_pybuffernd_activations.diminfo[3].strides = __pyx_pybuffernd_activations.rcbuffer->pybuffer.strides[3]; __pyx_pybuffernd_activations.diminfo[3].shape = __pyx_pybuffernd_activations.rcbuffer->pybuffer.shape[3];
@@ -1663,7 +1663,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_v_activations = ((PyArrayObject *)__pyx_t_4);
   __pyx_t_4 = 0;
 
-  /* "convx.pyx":38
+  /* "mlp/convx.pyx":38
  *             (num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
  * 
  *     cdef numpy.ndarray[DTYPE_t, ndim=2] output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)             # <<<<<<<<<<<<<<
@@ -1710,7 +1710,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_t_10 = ((PyArrayObject *)__pyx_t_6);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_output.rcbuffer->pybuffer, (PyObject*)__pyx_t_10, &__Pyx_TypeInfo_nn___pyx_t_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_output.rcbuffer->pybuffer, (PyObject*)__pyx_t_10, &__Pyx_TypeInfo_nn___pyx_t_3mlp_5convx_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_output = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_output.rcbuffer->pybuffer.buf = NULL;
       {__pyx_filename = __pyx_f[0]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     } else {__pyx_pybuffernd_output.diminfo[0].strides = __pyx_pybuffernd_output.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_output.diminfo[0].shape = __pyx_pybuffernd_output.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_output.diminfo[1].strides = __pyx_pybuffernd_output.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_output.diminfo[1].shape = __pyx_pybuffernd_output.rcbuffer->pybuffer.shape[1];
@@ -1720,7 +1720,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_v_output = ((PyArrayObject *)__pyx_t_6);
   __pyx_t_6 = 0;
 
-  /* "convx.pyx":43
+  /* "mlp/convx.pyx":43
  *     cdef numpy.ndarray[DTYPE_t, ndim=2] input_dot_weights
  * 
  *     for row_i in xrange(0, num_rows_units):             # <<<<<<<<<<<<<<
@@ -1731,7 +1731,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
     __pyx_v_row_i = __pyx_t_12;
 
-    /* "convx.pyx":44
+    /* "mlp/convx.pyx":44
  * 
  *     for row_i in xrange(0, num_rows_units):
  *         for col_j in xrange(0, num_cols_units):             # <<<<<<<<<<<<<<
@@ -1742,7 +1742,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
     for (__pyx_t_14 = 0; __pyx_t_14 < __pyx_t_13; __pyx_t_14+=1) {
       __pyx_v_col_j = __pyx_t_14;
 
-      /* "convx.pyx":45
+      /* "mlp/convx.pyx":45
  *     for row_i in xrange(0, num_rows_units):
  *         for col_j in xrange(0, num_cols_units):
  *             row_i_plus_kernel = kernel_shape_x + row_i             # <<<<<<<<<<<<<<
@@ -1751,7 +1751,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
       __pyx_v_row_i_plus_kernel = (__pyx_v_kernel_shape_x + __pyx_v_row_i);
 
-      /* "convx.pyx":46
+      /* "mlp/convx.pyx":46
  *         for col_j in xrange(0, num_cols_units):
  *             row_i_plus_kernel = kernel_shape_x + row_i
  *             col_j_plus_kernel = kernel_shape_y + col_j             # <<<<<<<<<<<<<<
@@ -1760,7 +1760,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
  */
       __pyx_v_col_j_plus_kernel = (__pyx_v_kernel_shape_y + __pyx_v_col_j);
 
-      /* "convx.pyx":47
+      /* "mlp/convx.pyx":47
  *             row_i_plus_kernel = kernel_shape_x + row_i
  *             col_j_plus_kernel = kernel_shape_y + col_j
  *             for b in xrange(0, num_batches):             # <<<<<<<<<<<<<<
@@ -1771,7 +1771,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
       for (__pyx_t_16 = 0; __pyx_t_16 < __pyx_t_15; __pyx_t_16+=1) {
         __pyx_v_b = __pyx_t_16;
 
-        /* "convx.pyx":48
+        /* "mlp/convx.pyx":48
  *             col_j_plus_kernel = kernel_shape_y + col_j
  *             for b in xrange(0, num_batches):
  *                 for f in xrange(0, num_out_feat_maps):             # <<<<<<<<<<<<<<
@@ -1782,7 +1782,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
         for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
           __pyx_v_f = __pyx_t_18;
 
-          /* "convx.pyx":49
+          /* "mlp/convx.pyx":49
  *             for b in xrange(0, num_batches):
  *                 for f in xrange(0, num_out_feat_maps):
  *                     for ifm in xrange(0, num_input_feature_maps):             # <<<<<<<<<<<<<<
@@ -1793,7 +1793,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
           for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_19; __pyx_t_20+=1) {
             __pyx_v_ifm = __pyx_t_20;
 
-            /* "convx.pyx":50
+            /* "mlp/convx.pyx":50
  *                 for f in xrange(0, num_out_feat_maps):
  *                     for ifm in xrange(0, num_input_feature_maps):
  *                         activations[b][f][row_i][col_j] += (             # <<<<<<<<<<<<<<
@@ -1812,7 +1812,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
             __pyx_t_3 = __Pyx_GetItemInt(__pyx_t_6, __pyx_t_21, unsigned int, 0, __Pyx_PyInt_From_unsigned_int, 0, 0, 1); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
             __Pyx_GOTREF(__pyx_t_3);
 
-            /* "convx.pyx":51
+            /* "mlp/convx.pyx":51
  *                     for ifm in xrange(0, num_input_feature_maps):
  *                         activations[b][f][row_i][col_j] += (
  *                             (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]             # <<<<<<<<<<<<<<
@@ -1853,7 +1853,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
             __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-            /* "convx.pyx":52
+            /* "mlp/convx.pyx":52
  *                         activations[b][f][row_i][col_j] += (
  *                             (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
  *                              * weights[f][row_i][col_j]) + biases[f][row_i][col_j]).sum()             # <<<<<<<<<<<<<<
@@ -1905,7 +1905,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
             __Pyx_GOTREF(__pyx_t_7);
             __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-            /* "convx.pyx":50
+            /* "mlp/convx.pyx":50
  *                 for f in xrange(0, num_out_feat_maps):
  *                     for ifm in xrange(0, num_input_feature_maps):
  *                         activations[b][f][row_i][col_j] += (             # <<<<<<<<<<<<<<
@@ -1925,7 +1925,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
     }
   }
 
-  /* "convx.pyx":53
+  /* "mlp/convx.pyx":53
  *                             (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
  *                              * weights[f][row_i][col_j]) + biases[f][row_i][col_j]).sum()
  *     return activations             # <<<<<<<<<<<<<<
@@ -1935,7 +1935,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
   __pyx_r = ((PyObject *)__pyx_v_activations);
   goto __pyx_L0;
 
-  /* "convx.pyx":9
+  /* "mlp/convx.pyx":9
  * 
  * 
  * def convolution_fprop_fast(             # <<<<<<<<<<<<<<
@@ -1961,7 +1961,7 @@ static PyObject *__pyx_pf_5convx_convolution_fprop_fast(CYTHON_UNUSED PyObject *
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_output.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_weights.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("convx.convolution_fprop_fast", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("mlp.convx.convolution_fprop_fast", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
@@ -4157,7 +4157,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_col_j, __pyx_k_col_j, sizeof(__pyx_k_col_j), 0, 0, 1, 1},
   {&__pyx_n_s_col_j_plus_kernel, __pyx_k_col_j_plus_kernel, sizeof(__pyx_k_col_j_plus_kernel), 0, 0, 1, 1},
   {&__pyx_n_s_convolution_fprop_fast, __pyx_k_convolution_fprop_fast, sizeof(__pyx_k_convolution_fprop_fast), 0, 0, 1, 1},
-  {&__pyx_n_s_convx, __pyx_k_convx, sizeof(__pyx_k_convx), 0, 0, 1, 1},
   {&__pyx_n_s_dtype, __pyx_k_dtype, sizeof(__pyx_k_dtype), 0, 0, 1, 1},
   {&__pyx_n_s_f, __pyx_k_f, sizeof(__pyx_k_f), 0, 0, 1, 1},
   {&__pyx_n_s_float32, __pyx_k_float32, sizeof(__pyx_k_float32), 0, 0, 1, 1},
@@ -4170,6 +4169,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_kernel_shape_x, __pyx_k_kernel_shape_x, sizeof(__pyx_k_kernel_shape_x), 0, 0, 1, 1},
   {&__pyx_n_s_kernel_shape_y, __pyx_k_kernel_shape_y, sizeof(__pyx_k_kernel_shape_y), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
+  {&__pyx_n_s_mlp_convx, __pyx_k_mlp_convx, sizeof(__pyx_k_mlp_convx), 0, 0, 1, 1},
   {&__pyx_kp_u_ndarray_is_not_C_contiguous, __pyx_k_ndarray_is_not_C_contiguous, sizeof(__pyx_k_ndarray_is_not_C_contiguous), 0, 1, 0, 0},
   {&__pyx_kp_u_ndarray_is_not_Fortran_contiguou, __pyx_k_ndarray_is_not_Fortran_contiguou, sizeof(__pyx_k_ndarray_is_not_Fortran_contiguou), 0, 1, 0, 0},
   {&__pyx_n_s_num_batches, __pyx_k_num_batches, sizeof(__pyx_k_num_batches), 0, 0, 1, 1},
@@ -4275,7 +4275,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__6);
   __Pyx_GIVEREF(__pyx_tuple__6);
 
-  /* "convx.pyx":9
+  /* "mlp/convx.pyx":9
  * 
  * 
  * def convolution_fprop_fast(             # <<<<<<<<<<<<<<
@@ -4368,14 +4368,14 @@ PyMODINIT_FUNC PyInit_convx(void)
   #if PY_MAJOR_VERSION < 3 && (__PYX_DEFAULT_STRING_ENCODING_IS_ASCII || __PYX_DEFAULT_STRING_ENCODING_IS_DEFAULT)
   if (__Pyx_init_sys_getdefaultencoding_params() < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   #endif
-  if (__pyx_module_is_main_convx) {
+  if (__pyx_module_is_main_mlp__convx) {
     if (PyObject_SetAttrString(__pyx_m, "__name__", __pyx_n_s_main) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   #if PY_MAJOR_VERSION >= 3
   {
     PyObject *modules = PyImport_GetModuleDict(); if (unlikely(!modules)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (!PyDict_GetItemString(modules, "convx")) {
-      if (unlikely(PyDict_SetItemString(modules, "convx", __pyx_m) < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (!PyDict_GetItemString(modules, "mlp.convx")) {
+      if (unlikely(PyDict_SetItemString(modules, "mlp.convx", __pyx_m) < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
   }
   #endif
@@ -4407,7 +4407,7 @@ PyMODINIT_FUNC PyInit_convx(void)
   if (__Pyx_patch_abc() < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   #endif
 
-  /* "convx.pyx":2
+  /* "mlp/convx.pyx":2
  * cimport numpy
  * import numpy             # <<<<<<<<<<<<<<
  * 
@@ -4418,7 +4418,7 @@ PyMODINIT_FUNC PyInit_convx(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_numpy, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 2; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "convx.pyx":4
+  /* "mlp/convx.pyx":4
  * import numpy
  * 
  * DTYPE = numpy.float32             # <<<<<<<<<<<<<<
@@ -4433,19 +4433,19 @@ PyMODINIT_FUNC PyInit_convx(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPE, __pyx_t_2) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 4; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "convx.pyx":9
+  /* "mlp/convx.pyx":9
  * 
  * 
  * def convolution_fprop_fast(             # <<<<<<<<<<<<<<
  *         numpy.ndarray[DTYPE_t, ndim=5] weights,
  *         numpy.ndarray[DTYPE_t, ndim=3] biases,
  */
-  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5convx_1convolution_fprop_fast, NULL, __pyx_n_s_convx); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_3mlp_5convx_1convolution_fprop_fast, NULL, __pyx_n_s_mlp_convx); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_convolution_fprop_fast, __pyx_t_2) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "convx.pyx":1
+  /* "mlp/convx.pyx":1
  * cimport numpy             # <<<<<<<<<<<<<<
  * import numpy
  * 
@@ -4471,11 +4471,11 @@ PyMODINIT_FUNC PyInit_convx(void)
   __Pyx_XDECREF(__pyx_t_2);
   if (__pyx_m) {
     if (__pyx_d) {
-      __Pyx_AddTraceback("init convx", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      __Pyx_AddTraceback("init mlp.convx", __pyx_clineno, __pyx_lineno, __pyx_filename);
     }
     Py_DECREF(__pyx_m); __pyx_m = 0;
   } else if (!PyErr_Occurred()) {
-    PyErr_SetString(PyExc_ImportError, "init convx");
+    PyErr_SetString(PyExc_ImportError, "init mlp.convx");
   }
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();

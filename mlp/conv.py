@@ -64,7 +64,7 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
     num_rows_units = weights.shape[1]
     num_cols_units = weights.shape[2]
     num_input_feature_maps = inputs.shape[1]
-    kernal_size = kernel_shape_x * kernel_shape_y
+    kernel_size = kernel_shape_x * kernel_shape_y
 
     # make the activation to be the size of the output
     activations = numpy.zeros((num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
@@ -81,7 +81,7 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
                         # flatten and sum across all elements
                         activations[b][f][row_i][col_j] += (
                             (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
-                             * weights[f][row_i][col_j]) + biases[f][row_i][col_j]).sum()
+                             * weights[f][row_i][col_j])).sum() + (kernel_size * biases[f][row_i][col_j])
     return activations
 
 
