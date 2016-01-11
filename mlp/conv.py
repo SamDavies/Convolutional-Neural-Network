@@ -69,20 +69,28 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
     # make the activation to be the size of the output
     activations = numpy.zeros((num_batches, num_out_feat_maps, num_rows_units, num_cols_units), dtype=numpy.float32)
 
+    activations = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(activations, 1, 0), 2, 1), 3, 2)
+    inputs = numpy.rollaxis(inputs, 1, 0)
+
     for row_i in xrange(0, num_rows_units):
         for col_j in xrange(0, num_cols_units):
             row_i_plus_kernel = kernel_shape_x + row_i
             col_j_plus_kernel = kernel_shape_y + col_j
-            for b in xrange(0, num_batches):
-                for f in xrange(0, num_out_feat_maps):
-                    # go through each unit of this layer
-                    for ifm in xrange(0, num_input_feature_maps):
-                        # find the sum of the input * weight for every pixel in the kernel
-                        # flatten and sum across all elements
-                        activations[b][f][row_i][col_j] += (
-                            (inputs[b][ifm][row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
-                             * weights[f][row_i][col_j])).sum() + (kernel_size * biases[f][row_i][col_j])
-    return activations
+            for f in xrange(0, num_out_feat_maps):
+                # go through each unit of this layer
+                for ifm in xrange(0, num_input_feature_maps):
+                    sub_weights = weights[f][row_i][col_j]
+                    sub_biases = biases[f][row_i][col_j]
+
+                    sub_inputs = inputs[ifm][0:, row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
+                    sub_inputs_w_b = (sub_inputs * sub_weights) + sub_biases
+                    sub_inputs_w_b_flat = sub_inputs_w_b.reshape(sub_inputs_w_b.shape[0], -1)
+
+                    # sum along axis b
+                    sum_along_b = numpy.sum(sub_inputs_w_b_flat, axis=1)
+
+                    activations[f][row_i][col_j] += sum_along_b
+    return numpy.rollaxis(activations, 3, 0)
 
 
 class ConvLinear(Layer):
@@ -165,7 +173,7 @@ class ConvLinear(Layer):
         inputs = numpy.array(inputs, dtype=numpy.float32)
         self.W = numpy.array(self.W, dtype=numpy.float32)
         self.b = numpy.array(self.b, dtype=numpy.float32)
-        activations = convx.convolution_fprop_fast(
+        activations = convolution_fprop_fast(
                 self.W, self.b, self.num_out_feat_maps,
                 self.kernel_shape[0], self.kernel_shape[1], inputs
         )
