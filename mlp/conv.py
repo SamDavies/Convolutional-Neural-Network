@@ -43,7 +43,7 @@ def convolution_fprop(weights, biases, num_out_feat_maps, kernel_shape_x, kernel
                     for col_j in xrange(0, num_cols_units):
                         # find the sum of the input * weight for every pixel in the kernel
                         sub_img = inputs[b][ifm][row_i:kernel_shape_x + row_i, col_j:kernel_shape_y + col_j]
-                        input_dot_weights = numpy.multiply(sub_img, weights[f][row_i][col_j]) + biases[f][row_i][col_j]
+                        input_dot_weights = numpy.multiply(sub_img, weights[ifm][f][row_i][col_j]) + biases[f][row_i][col_j]
                         # flatten and sum across all elements
                         activations[b][f][row_i][col_j] += input_dot_weights.reshape(
                             kernel_shape_x * kernel_shape_y).sum()
@@ -61,8 +61,8 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
     :return: 4D tensor of size (batch_size, num_in_feature_maps, num_rows_in_layer, num_cols_in_layer)
     """
     num_batches = inputs.shape[0]
-    num_rows_units = weights.shape[1]
-    num_cols_units = weights.shape[2]
+    num_rows_units = weights.shape[2]
+    num_cols_units = weights.shape[3]
     num_input_feature_maps = inputs.shape[1]
 
     # make the activation to be the size of the output
@@ -78,7 +78,7 @@ def convolution_fprop_fast(weights, biases, num_out_feat_maps, kernel_shape_x, k
             for f in xrange(0, num_out_feat_maps):
                 # go through each unit of this layer
                 for ifm in xrange(0, num_input_feature_maps):
-                    sub_weights = weights[f][row_i][col_j]
+                    sub_weights = weights[ifm][f][row_i][col_j]
                     sub_biases = biases[f][row_i][col_j]
 
                     sub_inputs = inputs[ifm][0:, row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
@@ -96,10 +96,10 @@ def convolution_bprop_fast(weights, deltas, image_shape_x, image_shape_y, num_in
     num_images = deltas.shape[0]
 
     num_out_feat_maps = weights.shape[0]
-    num_rows_units = weights.shape[1]
-    num_cols_units = weights.shape[2]
-    kernel_shape_x = weights.shape[3]
-    kernel_shape_y = weights.shape[4]
+    num_rows_units = weights.shape[2]
+    num_cols_units = weights.shape[3]
+    kernel_shape_x = weights.shape[4]
+    kernel_shape_y = weights.shape[5]
 
     ograds = numpy.zeros((num_images, num_inp_feat_maps, image_shape_x, image_shape_y), dtype=numpy.float32)
 
@@ -123,6 +123,35 @@ def convolution_bprop_fast(weights, deltas, image_shape_x, image_shape_y, num_in
                                     col_u:kernel_col_end][0:]
                     image_segment += unit_delta
     return numpy.rollaxis(ograds, 3, 0)
+
+
+def convolution_pgrads(weights, inputs, deltas):
+    num_images = inputs.shape[0]
+    num_input_feature_maps = inputs.shape[1]
+
+    num_out_feat_maps = weights.shape[1]
+    num_rows_units = weights.shape[2]
+    num_cols_units = weights.shape[3]
+    kernel_shape_x = weights.shape[4]
+    kernel_shape_y = weights.shape[5]
+
+    # set up deltas that be added to weight in the next step
+    # i.e they have the same shape as weights
+    grad_W = numpy.zeros(weights.shape, dtype=numpy.float32)
+
+    for ifm in range(0, num_input_feature_maps):
+        # for each row of units in this layer
+        for row_u in range(0, num_rows_units):
+            # for each col of units in this layer
+            for col_u in range(0, num_cols_units):
+                kernel_row_end = kernel_shape_x + row_u
+                kernel_col_end = kernel_shape_y + col_u
+                for ofm in range(0, num_out_feat_maps):
+                    for image_i in range(0, num_images):
+                        unit_delta = deltas[image_i][ofm][row_u][col_u]
+                        input_kernel = inputs[image_i][ifm][row_u:kernel_row_end, col_u:kernel_col_end]
+                        grad_W[ifm][ofm][row_u][col_u] += input_kernel * unit_delta
+    return grad_W
 
 
 class ConvLinear(Layer):
@@ -173,7 +202,8 @@ class ConvLinear(Layer):
         self.W = numpy.array(
                 self.rng.uniform(
                         -irange, irange,
-                        (num_out_feat_maps,
+                        (num_inp_feat_maps,
+                         num_out_feat_maps,
                          (image_shape[0] - kernel_shape[0] + 1),
                          (image_shape[1] - kernel_shape[1] + 1),
                          kernel_shape[0],
@@ -205,7 +235,7 @@ class ConvLinear(Layer):
         inputs = numpy.array(inputs, dtype=numpy.float32)
         self.W = numpy.array(self.W, dtype=numpy.float32)
         self.b = numpy.array(self.b, dtype=numpy.float32)
-        activations = convx.convolution_fprop_fast(
+        activations = convolution_fprop_fast(
                 self.W, self.b, self.num_out_feat_maps,
                 self.kernel_shape[0], self.kernel_shape[1], inputs
         )
@@ -235,11 +265,11 @@ class ConvLinear(Layer):
         deltas = igrads
 
         # shape the igrads into this layer size
-        deltas_square = igrads.reshape(igrads.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2])
+        deltas_square = igrads.reshape(igrads.shape[0], self.num_out_feat_maps, self.W.shape[2], self.W.shape[3])
 
         self.W = numpy.array(self.W, dtype=numpy.float32)
         deltas_square = numpy.array(deltas_square, dtype=numpy.float32)
-        ograds = convx.convolution_bprop_fast(
+        ograds = convolution_bprop_fast(
                 self.W, deltas_square, self.image_shape[0], self.image_shape[1], self.num_inp_feat_maps
         )
 
@@ -272,7 +302,7 @@ class ConvLinear(Layer):
         inputs = inputs.reshape((inputs.shape[0], self.num_inp_feat_maps, self.image_shape[0], self.image_shape[1]))
 
         # shape the deltas into - batch_size X input_feature_maps X unit_rows X unit_cols
-        deltas = deltas.reshape((deltas.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2]))
+        deltas = deltas.reshape((deltas.shape[0], self.num_out_feat_maps, self.W.shape[2], self.W.shape[3]))
 
         # you could basically use different scalers for biases
         # and weights, but it is not implemented here like this
@@ -286,21 +316,7 @@ class ConvLinear(Layer):
             l1_W_penalty = l1_weight * numpy.sign(self.W)
             l1_b_penalty = l1_weight * numpy.sign(self.b)
 
-        # set up deltas that be added to weight in the next step
-        # i.e they have the same shape as weights
-        grad_W = numpy.zeros(self.W.shape, dtype=numpy.float32)
-
-        # for each row of units in this layer
-        for row_u in range(0, self.W.shape[1]):
-            # for each col of units in this layer
-            for col_u in range(0, self.W.shape[2]):
-                # for each image
-                for image_i in range(0, inputs.shape[0]):
-                    for feature_map_f in range(0, self.num_out_feat_maps):
-                        unit_delta = deltas[image_i][feature_map_f][row_u][col_u]
-                        input_kernel = inputs[image_i][0][row_u:self.kernel_shape[0] + row_u,
-                                       col_u:self.kernel_shape[1] + col_u]
-                        grad_W[feature_map_f][row_u][col_u] += input_kernel * unit_delta
+        grad_W = convolution_pgrads(self.W, inputs, deltas)
 
         grad_b_flat = numpy.sum(deltas, axis=0) + l2_b_penalty + l1_b_penalty
         # make the gradients for the bias square

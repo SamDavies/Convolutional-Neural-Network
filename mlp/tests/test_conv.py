@@ -19,9 +19,9 @@ class FeatureMapTestCase(TestCase):
         self.rng_state = self.rng.get_state()
 
     def test_create_linear(self):
-        conv = ConvLinear(1, 1, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
-        weights = conv.W[0]
-        self.assertEqual(weights.shape, (24, 24, 5, 5))
+        conv = ConvLinear(1, 2, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
+        weights = conv.W
+        self.assertEqual(weights.shape, (1, 2, 24, 24, 5, 5))
 
     def test_fprop_for_1_iamge(self):
         """ Ensure that 1 forward prop pass works for 1 image """
@@ -39,9 +39,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps])
 
-        weights = conv.W[0]
-        num_rows_units = len(weights[0])
-        num_cols_units = len(weights[1])
+        num_rows_units = conv.W.shape[2]
+        num_cols_units = conv.W.shape[3]
 
         expected = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0] = 1.0
@@ -65,9 +64,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps, feature_maps])
 
-        weights = conv.W[0]
-        num_rows_units = len(weights[0])
-        num_cols_units = len(weights[1])
+        num_rows_units = conv.W.shape[2]
+        num_cols_units = conv.W.shape[3]
 
         expected = numpy.zeros((2, 1, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 1.0
@@ -90,9 +88,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([image, image])
 
-        weights = conv.W[0]
-        num_rows_units = len(weights[0])
-        num_cols_units = len(weights[1])
+        num_rows_units = conv.W.shape[2]
+        num_cols_units = conv.W.shape[3]
 
         expected = numpy.zeros((2, 1, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 1.0
@@ -118,9 +115,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps, feature_maps])
 
-        weights = conv.W[0]
-        num_rows_units = len(weights[0])
-        num_cols_units = len(weights[1])
+        num_rows_units = conv.W.shape[2]
+        num_cols_units = conv.W.shape[3]
 
         expected = numpy.zeros((2, 2, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 1.0
@@ -150,9 +146,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps, feature_maps])
 
-        weights = conv.W[0]
-        num_rows_units = len(weights[0])
-        num_cols_units = len(weights[1])
+        num_rows_units = conv.W.shape[2]
+        num_cols_units = conv.W.shape[3]
 
         expected = numpy.zeros((2, 1, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 2.0
@@ -279,7 +274,7 @@ class ConvLinearTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.149, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.19, delta=0.005)
 
     def test_model_bprop_3_feature_maps_2_layers(self):
         """ Ensure that back prop works when the conv layer has 1 below it """
