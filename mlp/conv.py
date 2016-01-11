@@ -103,22 +103,26 @@ def convolution_bprop(weights, deltas, image_shape_x, image_shape_y, num_inp_fea
 
     ograds = numpy.zeros((num_images, num_inp_feat_maps, image_shape_x, image_shape_y), dtype=numpy.float32)
 
-    # for each image
-    for image_i in range(0, num_images):
-        # for each input feature map
-        for inp_feature_map_f in range(0, num_inp_feat_maps):
-            # for each row of units in this layer
-            for row_u in range(0, num_rows_units):
-                # for each col of units in this layer
-                for col_u in range(0, num_cols_units):
-                    # for each feature map in this layer
-                    for out_feature_map_f in range(0, num_out_feat_maps):
-                        unit_delta = deltas[image_i][out_feature_map_f][row_u][col_u]
-                        # find the portion in the image which is effected by this unit
-                        image_segment = ograds[image_i][inp_feature_map_f][row_u:kernel_shape_x + row_u,
-                                        col_u:kernel_shape_y + col_u]
-                        image_segment += unit_delta
-    return ograds
+    deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas, 1, 0), 2, 1), 3, 2)
+    ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
+
+    # for each input feature map
+    for inp_feature_map_f in range(0, num_inp_feat_maps):
+        # for each row of units in this layer
+        for row_u in range(0, num_rows_units):
+            # for each col of units in this layer
+            for col_u in range(0, num_cols_units):
+                kernel_row_end = kernel_shape_x + row_u
+                kernel_col_end = kernel_shape_y + col_u
+                # for each feature map in this layer
+                for out_feature_map_f in range(0, num_out_feat_maps):
+                    # for each image
+                    unit_delta = deltas[out_feature_map_f][row_u][col_u][0:]
+                    # find the portion in the image which is effected by this unit
+                    image_segment = ograds[inp_feature_map_f][row_u:kernel_row_end,
+                                    col_u:kernel_col_end][0:]
+                    image_segment += unit_delta
+    return numpy.rollaxis(ograds, 3, 0)
 
 
 class ConvLinear(Layer):
@@ -232,25 +236,6 @@ class ConvLinear(Layer):
 
         # shape the igrads into this layer size
         deltas_square = igrads.reshape(igrads.shape[0], self.num_out_feat_maps, self.W.shape[1], self.W.shape[2])
-
-        # ograds = numpy.zeros((igrads.shape[0], self.num_inp_feat_maps, self.image_shape[0], self.image_shape[1]),
-        #                      dtype=numpy.float32)
-        #
-        # # for each image
-        # for image_i in range(0, igrads.shape[0]):
-        #     # for eaxh input feature map
-        #     for inp_feature_map_f in range(0, self.num_inp_feat_maps):
-        #         # for each row of units in this layer
-        #         for row_u in range(0, self.W.shape[1]):
-        #             # for each col of units in this layer
-        #             for col_u in range(0, self.W.shape[2]):
-        #                 # for each feature map in this layer
-        #                 for out_feature_map_f in range(0, self.num_out_feat_maps):
-        #                     unit_delta = deltas_square[image_i][out_feature_map_f][row_u][col_u]
-        #                     # find the portion in the image which is effected by this unit
-        #                     image_segment = ograds[image_i][inp_feature_map_f][row_u:self.kernel_shape[0] + row_u,
-        #                                     col_u:self.kernel_shape[1] + col_u]
-        #                     image_segment += unit_delta
 
         ograds = convolution_bprop(
                 self.W, deltas_square, self.image_shape[0], self.image_shape[1], self.num_inp_feat_maps
