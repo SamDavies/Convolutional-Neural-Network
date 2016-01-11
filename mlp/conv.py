@@ -126,7 +126,6 @@ def convolution_bprop_fast(weights, deltas, image_shape_x, image_shape_y, num_in
 
 
 def convolution_pgrads(weights, inputs, deltas):
-    num_images = inputs.shape[0]
     num_input_feature_maps = inputs.shape[1]
 
     num_out_feat_maps = weights.shape[1]
@@ -139,6 +138,9 @@ def convolution_pgrads(weights, inputs, deltas):
     # i.e they have the same shape as weights
     grad_W = numpy.zeros(weights.shape, dtype=numpy.float32)
 
+    deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas, 1, 0), 2, 1), 3, 2)
+    inputs = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(inputs, 1, 0), 2, 1), 3, 2)
+
     for ifm in range(0, num_input_feature_maps):
         # for each row of units in this layer
         for row_u in range(0, num_rows_units):
@@ -147,10 +149,11 @@ def convolution_pgrads(weights, inputs, deltas):
                 kernel_row_end = kernel_shape_x + row_u
                 kernel_col_end = kernel_shape_y + col_u
                 for ofm in range(0, num_out_feat_maps):
-                    for image_i in range(0, num_images):
-                        unit_delta = deltas[image_i][ofm][row_u][col_u]
-                        input_kernel = inputs[image_i][ifm][row_u:kernel_row_end, col_u:kernel_col_end]
-                        grad_W[ifm][ofm][row_u][col_u] += input_kernel * unit_delta
+                    unit_delta = deltas[ofm][row_u][col_u][0:]
+                    input_kernel = inputs[ifm][row_u:kernel_row_end, col_u:kernel_col_end][0:]
+                    grad = input_kernel * unit_delta
+                    sum_grad = numpy.sum(grad, axis=2)
+                    grad_W[ifm][ofm][row_u][col_u] += sum_grad
     return grad_W
 
 
