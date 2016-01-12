@@ -3,8 +3,8 @@ from unittest import TestCase
 import numpy
 import time
 
-from mlp.conv import ConvLinear
-from numpy.testing import assert_array_equal
+from mlp.conv import ConvLinear, ConvMaxPool2D
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from mlp.costs import CECost, MSECost
 from mlp.dataset import MNISTDataProvider
@@ -489,6 +489,21 @@ class ConvLinearTestCase(TestCase):
         expected = numpy.array([[2., 2.], [2., 2.]])
         actual = model.fprop(batch)
         assert_array_equal(actual, expected, verbose=True)
+
+    def test_model_fprop_max_pool(self):
+        """ Ensure that 1 forward prop pass works """
+        train_dp = MNISTDataProvider(dset='train', batch_size=100, max_num_batches=3, randomize=True)
+        train_dp.reset()
+
+        cost = CECost()
+        model = MLP(cost=cost)
+        model.add_layer(ConvLinear(1, 3, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1),irange=0.2))
+        model.add_layer(ConvMaxPool2D(num_feat_maps=3, conv_shape=(24, 24), pool_shape=(2, 2)))
+        model.add_layer(Sigmoid(idim=432, odim=4))
+
+        x, t = train_dp.next()
+        actual = model.fprop(x)
+        assert_array_almost_equal(actual[0], [0.471462, 0.463854, 0.356474, 0.594162], verbose=True, decimal=2)
 
     def test_model_fprop_multi_feature_maps(self):
         """ Ensure that 1 forward prop pass works """

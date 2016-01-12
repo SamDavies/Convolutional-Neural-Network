@@ -405,12 +405,54 @@ class ConvMaxPool2D(Layer):
         :param pool_stride: tuple, a strides for pooling operator
         :return:
         """
+        self.num_feat_maps = num_feat_maps
+        self.conv_shape = conv_shape
+        self.pool_shape = pool_shape
+        self.pool_stride = pool_stride
+
+        self.num_unit_rows = conv_shape[0]/pool_shape[0]
+        self.num_unit_cols = conv_shape[1]/pool_shape[1]
 
         super(ConvMaxPool2D, self).__init__(rng=None)
-        raise NotImplementedError()
+        self.sudoW = None
 
     def fprop(self, inputs):
-        raise NotImplementedError()
+        # Note that the sudoW is not used to calculate the activations
+        # It is set to 1 for the max input in the pool
+        self.sudoW = numpy.zeros((
+            inputs.shape[0],
+            self.num_feat_maps,
+            self.num_unit_rows,
+            self.num_unit_cols,
+            self.pool_shape[0],
+            self.pool_shape[1]
+        ), dtype=numpy.float32)
+
+        num_batches = inputs.shape[0]
+        num_feat_maps = inputs.shape[1]
+        num_rows_units = self.sudoW.shape[2]
+        num_cols_units = self.sudoW.shape[3]
+        pool_shape_x = self.sudoW.shape[4]
+        pool_shape_y = self.sudoW.shape[5]
+
+        # make the activation to be the size of the output
+        activations = numpy.zeros((num_batches, self.num_feat_maps, self.num_unit_rows, self.num_unit_rows), dtype=numpy.float32)
+
+        for row_i in xrange(0, num_rows_units):
+            for col_j in xrange(0, num_cols_units):
+                pool_row_i = row_i * pool_shape_x
+                pool_col_j = col_j * pool_shape_y
+                row_i_plus_pool = pool_row_i + pool_shape_x
+                col_j_plus_pool = pool_col_j + pool_shape_y
+                for f in xrange(0, num_feat_maps):
+                    for image_i in xrange(0, num_batches):
+                        sub_inputs = inputs[image_i][f][pool_row_i: row_i_plus_pool, pool_col_j:col_j_plus_pool]
+                        activations[image_i][f][row_i][col_j] = numpy.max(sub_inputs)
+
+                        # record the max for this image
+                        index_max = sub_inputs.argmax()
+                        numpy.reshape(self.sudoW[image_i][f][row_i][col_j], -1)[index_max] = 1
+        return activations
 
     def bprop(self, h, igrads):
         raise NotImplementedError()
