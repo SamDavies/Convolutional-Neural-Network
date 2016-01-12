@@ -434,9 +434,13 @@ class ConvMaxPool2D(Layer):
         num_cols_units = self.sudoW.shape[3]
         pool_shape_x = self.sudoW.shape[4]
         pool_shape_y = self.sudoW.shape[5]
+        pool_flat_shape = pool_shape_x * pool_shape_y
 
         # make the activation to be the size of the output
         activations = numpy.zeros((num_batches, self.num_feat_maps, self.num_unit_rows, self.num_unit_rows), dtype=numpy.float32)
+        inputs = numpy.rollaxis(inputs, 1, 0)
+        activations = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(activations, 1, 0), 2, 1), 3, 2)
+        self.sudoW = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(self.sudoW, 1, 0), 2, 1), 3, 2), 4, 3), 5, 4)
 
         for row_i in xrange(0, num_rows_units):
             for col_j in xrange(0, num_cols_units):
@@ -445,14 +449,25 @@ class ConvMaxPool2D(Layer):
                 row_i_plus_pool = pool_row_i + pool_shape_x
                 col_j_plus_pool = pool_col_j + pool_shape_y
                 for f in xrange(0, num_feat_maps):
-                    for image_i in xrange(0, num_batches):
-                        sub_inputs = inputs[image_i][f][pool_row_i: row_i_plus_pool, pool_col_j:col_j_plus_pool]
-                        activations[image_i][f][row_i][col_j] = numpy.max(sub_inputs)
+                    sub_inputs = inputs[f][0:, pool_row_i: row_i_plus_pool, pool_col_j:col_j_plus_pool]
+                    flat_sub_inputs = numpy.reshape(sub_inputs, (num_batches, pool_flat_shape))
+                    sub_maxes = numpy.max(flat_sub_inputs, axis=1)
+                    activations[f][row_i][col_j][0:] = sub_maxes
 
-                        # record the max for this image
-                        index_max = sub_inputs.argmax()
-                        numpy.reshape(self.sudoW[image_i][f][row_i][col_j], -1)[index_max] = 1
-        return activations
+                    # copy values
+                    # weight_col_row = self.sudoW[f][row_i][col_j]
+                    # flat_pool = numpy.reshape(weight_col_row, (self.sudoW.shape[3]*self.sudoW.shape[4], self.sudoW.shape[5]))
+                    # self.sudoW[f][row_i][col_j] = flat_sub_inputs
+
+                    # record the max for this image
+                    index_max = flat_sub_inputs.argmax(axis=1)
+                    weight_col_row = self.sudoW[f][row_i][col_j]
+                    flat_pool = numpy.reshape(weight_col_row, (self.sudoW.shape[3]*self.sudoW.shape[4], self.sudoW.shape[5]))
+                    for image_i in xrange(0, num_batches):
+                        flat_pool[index_max[image_i]][image_i] = 1
+
+        self.sudoW = numpy.rollaxis(self.sudoW, 5, 0)
+        return numpy.rollaxis(activations, 3, 0)
 
     def bprop(self, h, igrads):
         raise NotImplementedError()

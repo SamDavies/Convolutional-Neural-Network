@@ -503,6 +503,7 @@ class ConvLinearTestCase(TestCase):
 
         x, t = train_dp.next()
         actual = model.fprop(x)
+        assert_array_equal(model.layers[1].sudoW[6][0][7][0], [[0, 0], [0, 1]])
         assert_array_almost_equal(actual[0], [0.471462, 0.463854, 0.356474, 0.594162], verbose=True, decimal=2)
 
     def test_model_fprop_multi_feature_maps(self):
@@ -648,18 +649,20 @@ class ConvLinearTestCase(TestCase):
         model = MLP(cost=cost)
         model.add_layer(Sigmoid(idim=784, odim=784))
         model.add_layer(ConvLinear(1, 3, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
-        model.add_layer(ConvLinear(3, 3, image_shape=(24, 24), kernel_shape=(5, 5), stride=(1, 1), irange=0.2))
-        model.add_layer(Softmax(idim=1200, odim=10))
+        model.add_layer(ConvMaxPool2D(num_feat_maps=3, conv_shape=(24, 24), pool_shape=(2, 2)))
+        model.add_layer(Sigmoid(idim=432, odim=4))
 
         for x, t in train_dp:
-            y = model.fprop(x)
-            # compute the cost and grad of the cost w.r.t y
-            cost = model.cost.cost(y, t)
-            cost_grad = model.cost.grad(y, t)
-            # do backward pass through the model
             start = time.clock()
-            model.bprop(cost_grad)
+            y = model.fprop(x)
             stop = time.clock()
+            # compute the cost and grad of the cost w.r.t y
+            # cost = model.cost.cost(y, t)
+            # cost_grad = model.cost.grad(y, t)
+            # do backward pass through the model
+            # start = time.clock()
+            # model.bprop(cost_grad)
+            # stop = time.clock()
 
             print("batch done in {}".format(stop - start))
         self.assertTrue(True)
