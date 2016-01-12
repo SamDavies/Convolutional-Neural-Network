@@ -580,7 +580,7 @@ class ConvLinearTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.19, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.14, delta=0.005)
 
     def test_model_bprop_3_feature_maps_2_layers(self):
         """ Ensure that back prop works when the conv layer has 1 below it """

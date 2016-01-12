@@ -116,10 +116,10 @@ def convolution_bprop_fast(weights, bias, deltas, image_shape_x, image_shape_y, 
                 for ofm in range(0, num_out_feat_maps):
                     # for each image
                     unit_delta = deltas[ofm][row_u][col_u][0:]
-                    weights_delta = weights[ifm][ofm].T * unit_delta
+                    weights_delta = weights[ifm][ofm].T[:, :, None] * unit_delta.T
                     # find the portion in the image which is effected by this unit
                     image_segment = ograds[ifm][row_u:kernel_row_end,
-                                    col_u:kernel_col_end][0:]
+                                    col_u:kernel_col_end, 0:]
                     image_segment += weights_delta
 
     return numpy.rollaxis(ograds, 3, 0)
@@ -277,7 +277,7 @@ class ConvLinear(Layer):
         )
 
         # flatten the image in ograds
-        # ograds_flat = ograds.reshape(igrads.shape[0], -1)
+        ograds_flat = ograds.reshape(igrads.shape[0], -1)
 
         # shape of ograds:
         # - batch size
@@ -285,7 +285,7 @@ class ConvLinear(Layer):
         # - input image rows
         # - input image cols
         # shape of deltas same as igrads
-        return deltas, ograds
+        return deltas, ograds_flat
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('ConvLinear.bprop_cost method not implemented')
