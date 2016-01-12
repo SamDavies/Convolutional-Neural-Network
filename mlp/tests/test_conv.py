@@ -21,7 +21,97 @@ class FeatureMapTestCase(TestCase):
     def test_create_linear(self):
         conv = ConvLinear(1, 2, image_shape=(28, 28), kernel_shape=(5, 5), stride=(1, 1), irange=0.2)
         weights = conv.W
-        self.assertEqual(weights.shape, (1, 2, 24, 24, 5, 5))
+        self.assertEqual(weights.shape, (1, 2, 5, 5))
+
+    def test_conv_linear_fprop(self):
+        conv = ConvLinear(1, 2, image_shape=(4, 4), kernel_shape=(2, 2), stride=(1, 1), irange=0.2)
+        out = self.conv_linear_fprop(conv)
+        self.assertTrue(out)
+
+    def conv_linear_fprop(self, layer, kernel_order='ioxy', kernels_first=True,
+                           dtype=numpy.float):
+        """
+        Tests forward propagation method of a convolutional layer.
+
+        Checks the outputs of `fprop` method for a fixed input against known
+        reference values for the outputs and raises an AssertionError if
+        the outputted values are not consistent with the reference values. If
+        tests are all passed returns True.
+
+        Parameters
+        ----------
+        layer : instance of Layer subclass
+            Convolutional (linear only) layer implementation. It must implement
+            the methods `get_params`, `set_params` and `fprop`.
+        kernel_order : string
+            Specifes dimension ordering assumed for convolutional kernels
+            passed to `layer`. Default is `ioxy` which corresponds to:
+                input channels, output channels, image x, image y
+            The other option is 'oixy' which corresponds to
+                output channels, input channels, image x, image y
+            Any other value will raise a ValueError exception.
+        kernels_first : boolean
+            Specifies order in which parameters are passed to and returned from
+            `get_params` and `set_params`. Default is True which corresponds
+            to signatures of `get_params` and `set_params` being:
+                kernels, biases = layer.get_params()
+                layer.set_params([kernels, biases])
+            If False this corresponds to signatures of `get_params` and
+            `set_params` being:
+                biases, kernels = layer.get_params()
+                layer.set_params([biases, kernels])
+        dtype : numpy data type
+             Data type to use in numpy arrays passed to layer methods. Default
+             is `numpy.float`.
+
+        Raises
+        ------
+        AssertionError
+            Raised if output of `layer.fprop` is inconsistent with reference
+            values either in shape or values.
+        ValueError
+            Raised if `kernel_order` is not a valid order string.
+        """
+        inputs = numpy.arange(96).reshape((2, 3, 4, 4)).astype(dtype)
+        kernels = numpy.arange(-12, 12).reshape((3, 2, 2, 2)).astype(dtype)
+        if kernel_order == 'oixy':
+            kernels = kernels.swapaxes(0, 1)
+        elif kernel_order != 'ioxy':
+            raise ValueError('kernel_order must be one of "ioxy" and "oixy"')
+        biases = numpy.arange(2).astype(dtype)
+        true_output = numpy.array(
+          [[[[  496.,   466.,   436.],
+             [  376.,   346.,   316.],
+             [  256.,   226.,   196.]],
+            [[ 1385.,  1403.,  1421.],
+             [ 1457.,  1475.,  1493.],
+             [ 1529.,  1547.,  1565.]]],
+           [[[ -944.,  -974., -1004.],
+             [-1064., -1094., -1124.],
+             [-1184., -1214., -1244.]],
+            [[ 2249.,  2267.,  2285.],
+             [ 2321.,  2339.,  2357.],
+             [ 2393.,  2411.,  2429.]]]], dtype=dtype)
+        try:
+            orig_params = layer.get_params()
+            if kernels_first:
+                layer.set_params([kernels, biases])
+            else:
+                layer.set_params([biases, kernels])
+            layer_output = layer.fprop(inputs)
+            assert layer_output.shape == true_output.shape, (
+                'Layer fprop gives incorrect shaped output. '
+                'Correct shape is {0} but returned shape is {1}.'
+                .format(true_output.shape, layer_output.shape)
+            )
+            assert numpy.allclose(layer_output, true_output), (
+                'Layer fprop does not give correct output. '
+                'Correct output is {0}\n but returned output is {1}.'
+                .format(true_output, layer_output)
+            )
+        finally:
+            layer.set_params(orig_params)
+        return True
 
     def test_fprop_for_1_iamge(self):
         """ Ensure that 1 forward prop pass works for 1 image """
@@ -39,8 +129,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps])
 
-        num_rows_units = conv.W.shape[2]
-        num_cols_units = conv.W.shape[3]
+        num_rows_units = conv.num_rows_units
+        num_cols_units = conv.num_cols_units
 
         expected = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0] = 1.0
@@ -64,8 +154,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps, feature_maps])
 
-        num_rows_units = conv.W.shape[2]
-        num_cols_units = conv.W.shape[3]
+        num_rows_units = conv.num_rows_units
+        num_cols_units = conv.num_cols_units
 
         expected = numpy.zeros((2, 1, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 1.0
@@ -88,8 +178,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([image, image])
 
-        num_rows_units = conv.W.shape[2]
-        num_cols_units = conv.W.shape[3]
+        num_rows_units = conv.num_rows_units
+        num_cols_units = conv.num_cols_units
 
         expected = numpy.zeros((2, 1, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 1.0
@@ -115,8 +205,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps, feature_maps])
 
-        num_rows_units = conv.W.shape[2]
-        num_cols_units = conv.W.shape[3]
+        num_rows_units = conv.num_rows_units
+        num_cols_units = conv.num_cols_units
 
         expected = numpy.zeros((2, 2, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 1.0
@@ -146,8 +236,8 @@ class FeatureMapTestCase(TestCase):
         # make a batch of size 2
         batch = numpy.array([feature_maps, feature_maps])
 
-        num_rows_units = conv.W.shape[2]
-        num_cols_units = conv.W.shape[3]
+        num_rows_units = conv.num_rows_units
+        num_cols_units = conv.num_cols_units
 
         expected = numpy.zeros((2, 1, num_rows_units, num_cols_units), dtype=numpy.float32)
         expected[0][0][0][0] = 2.0
