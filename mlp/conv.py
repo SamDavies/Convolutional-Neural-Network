@@ -99,9 +99,10 @@ def convolution_bprop_fast(weights, bias, deltas, image_shape_x, image_shape_y, 
     kernel_shape_x = weights.shape[2]
     kernel_shape_y = weights.shape[3]
 
+    deltas = deltas.T
+
     ograds = numpy.zeros((num_images, num_inp_feat_maps, image_shape_x, image_shape_y), dtype=numpy.float32)
 
-    deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas, 1, 0), 2, 1), 3, 2)
     ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
 
     # for each input feature map
@@ -115,8 +116,8 @@ def convolution_bprop_fast(weights, bias, deltas, image_shape_x, image_shape_y, 
                 # for each feature map in this layer
                 for ofm in range(0, num_out_feat_maps):
                     # for each image
-                    unit_delta = deltas[ofm][row_u][col_u][0:]
-                    weights_delta = weights[ifm][ofm].T[:, :, None] * unit_delta.T
+                    unit_delta = deltas[col_u][row_u][ofm][0:]
+                    weights_delta = weights[ifm][ofm][:, :, None] * unit_delta
                     # find the portion in the image which is effected by this unit
                     image_segment = ograds[ifm][row_u:kernel_row_end,
                                     col_u:kernel_col_end, 0:]
@@ -285,7 +286,7 @@ class ConvLinear(Layer):
         # - input image rows
         # - input image cols
         # shape of deltas same as igrads
-        return deltas, ograds_flat
+        return deltas, ograds
 
     def bprop_cost(self, h, igrads, cost):
         raise NotImplementedError('ConvLinear.bprop_cost method not implemented')
@@ -454,11 +455,6 @@ class ConvMaxPool2D(Layer):
                     sub_maxes = numpy.max(flat_sub_inputs, axis=1)
                     activations[f][row_i][col_j][0:] = sub_maxes
 
-                    # copy values
-                    # weight_col_row = self.sudoW[f][row_i][col_j]
-                    # flat_pool = numpy.reshape(weight_col_row, (self.sudoW.shape[3]*self.sudoW.shape[4], self.sudoW.shape[5]))
-                    # self.sudoW[f][row_i][col_j] = flat_sub_inputs
-
                     # record the max for this image
                     index_max = flat_sub_inputs.argmax(axis=1)
                     weight_col_row = self.sudoW[f][row_i][col_j]
@@ -470,7 +466,39 @@ class ConvMaxPool2D(Layer):
         return numpy.rollaxis(activations, 3, 0)
 
     def bprop(self, h, igrads):
-        raise NotImplementedError()
+        # shape the igrads into this layer size
+        deltas = igrads.reshape(igrads.shape[0], self.num_feat_maps, self.num_unit_rows, self.num_unit_cols)
+
+        num_batches = self.sudoW.shape[0]
+        num_feat_maps = self.sudoW.shape[1]
+        num_rows_units = self.sudoW.shape[2]
+        num_cols_units = self.sudoW.shape[3]
+        pool_shape_x = self.sudoW.shape[4]
+        pool_shape_y = self.sudoW.shape[5]
+        pool_flat_shape = pool_shape_x * pool_shape_y
+
+        ograds = numpy.zeros((num_batches, num_feat_maps, num_rows_units * pool_shape_x, num_cols_units * pool_shape_y), dtype=numpy.float32)
+
+        # deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas_square, 1, 0), 2, 1), 3, 2)
+        # ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
+
+        for row_i in xrange(0, num_rows_units):
+            for col_j in xrange(0, num_cols_units):
+                pool_row_i = row_i * pool_shape_x
+                pool_col_j = col_j * pool_shape_y
+                row_i_plus_pool = pool_row_i + pool_shape_x
+                col_j_plus_pool = pool_col_j + pool_shape_y
+                for f in xrange(0, num_feat_maps):
+                    for image_i in xrange(0, num_batches):
+                        delta = deltas[image_i][f][row_i][col_j]
+                        w = self.sudoW[image_i][f][row_i][col_j].T
+                        ograds[image_i][f][pool_row_i: row_i_plus_pool, pool_col_j: col_j_plus_pool] = w * delta
+
+        # ograds = numpy.rollaxis(ograds, 3, 0)
+        # flatten the image in ograds
+        ograds_flat = ograds.reshape(igrads.shape[0], -1)
+
+        return igrads, ograds_flat
 
     def get_params(self):
         return []
