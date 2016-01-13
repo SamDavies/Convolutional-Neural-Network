@@ -279,8 +279,10 @@ class AutoEncoder(Optimiser):
         acc_list, nll_list = [], []
         for x in train_data:
 
+            inputs = self.add_noise(x)
+
             # get the prediction
-            y = model.fprop(x)
+            y = model.fprop(inputs)
 
             # compute the cost and grad of the cost w.r.t y
             cost = model.cost.cost(y, x)
@@ -313,6 +315,9 @@ class AutoEncoder(Optimiser):
         training_cost = numpy.mean(nll_list) + sum(prior_costs)
 
         return training_cost, numpy.mean(acc_list)
+
+    def add_noise(self, x):
+        return x
 
     def pre_train_output(self, model, train_iter):
         """
@@ -479,3 +484,13 @@ class CrossEntropy(Optimiser):
         training_cost = numpy.mean(nll_list) + sum(prior_costs)
 
         return training_cost, numpy.mean(acc_list)
+
+
+class DenoisingAutoEncoder(AutoEncoder):
+    def __init__(self, learning_rate, max_epochs, noise, rng):
+        super(DenoisingAutoEncoder, self).__init__(learning_rate, max_epochs)
+        self.noise = noise
+        self.rng = rng
+
+    def add_noise(self, x):
+        return self.noise.apply_noise(x, self.rng)
