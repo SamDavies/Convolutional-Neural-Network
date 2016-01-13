@@ -1,3 +1,4 @@
+import numpy
 
 
 class NoiseMaker(object):
@@ -7,7 +8,7 @@ class NoiseMaker(object):
         self.noise = noise
 
     def make_examples(self, rng):
-        # create an array which is the size of the number of batches batches
+        # create an array which is the size of the number of batches
         new_example_batches = [None] * self.num_batches
         # go through all of the batches
         for ith_batch in xrange(self.num_batches):
@@ -41,3 +42,15 @@ class DropoutNoise(AbstractNoise):
     def apply_noise(self, img, rng):
         d = rng.binomial(1, self.dropout_prob, img.shape)
         return d*img
+
+
+class RotationNoise(AbstractNoise):
+    def __init__(self, dropout_prob):
+        self.dropout_prob = dropout_prob
+
+    def apply_noise(self, img, rng):
+        img_shape = numpy.sqrt(len(img))
+        img = img.reshape((img_shape, img_shape))
+        img = numpy.rot90(img)
+        img = img.reshape((img_shape * img_shape))
+        return img
