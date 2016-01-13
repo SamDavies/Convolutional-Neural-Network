@@ -1,14 +1,9 @@
 from unittest import TestCase
 
-import numpy
-import time
-
-from mlp.conv import ConvLinear, ConvSigmoid, ConvRelu
-from numpy.testing import assert_array_equal
-
-from mlp.costs import CECost, MSECost
+from mlp.conv import ConvSigmoid, ConvRelu
+from mlp.costs import CECost
 from mlp.dataset import MNISTDataProvider
-from mlp.layers import MLP, Linear, Softmax, Sigmoid
+from mlp.layers import MLP, Softmax
 from mlp.optimisers import SGDOptimiser
 from mlp.schedulers import LearningRateFixed
 
