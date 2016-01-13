@@ -7,8 +7,8 @@ ctypedef numpy.float32_t DTYPE_t
 
 
 def convolution_fprop_fast(
-        numpy.ndarray[DTYPE_t, ndim=6] weights,
-        numpy.ndarray[DTYPE_t, ndim=4] biases,
+        numpy.ndarray[DTYPE_t, ndim=4] weights,
+        numpy.ndarray[DTYPE_t, ndim=1] biases,
         unsigned int num_rows_units,
         unsigned int num_cols_units,
         unsigned int num_out_feat_maps,
@@ -27,10 +27,8 @@ def convolution_fprop_fast(
     assert weights.dtype == DTYPE and inputs.dtype == DTYPE
 
     cdef unsigned int num_batches = inputs.shape[0]
-    cdef unsigned int num_rows_units = weights.shape[2]
-    cdef unsigned int num_cols_units = weights.shape[3]
     cdef unsigned int num_input_feature_maps = inputs.shape[1]
-    cdef unsigned int b, f, row_i, col_j, ifm, input_feature_map, row_i_plus_kernel, col_j_plus_kernel
+    cdef unsigned int b, f, row_i, col_j, ifm, row_i_plus_kernel, col_j_plus_kernel
 
     # make the activation tot be the size of the output
     cdef numpy.ndarray[DTYPE_t, ndim=4] activations = numpy.zeros(
@@ -38,29 +36,28 @@ def convolution_fprop_fast(
 
     cdef numpy.ndarray[DTYPE_t, ndim=2] output = numpy.zeros((num_rows_units, num_cols_units), dtype=numpy.float32)
 
-    cdef numpy.ndarray[DTYPE_t, ndim=2] sub_img
-    cdef numpy.ndarray[DTYPE_t, ndim=2] input_dot_weights
-
     activations = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(activations, 1, 0), 2, 1), 3, 2)
     inputs = numpy.rollaxis(inputs, 1, 0)
 
-    for ifm in range(0, num_input_feature_maps):
-        for row_i in xrange(0, num_rows_units):
-            for col_j in xrange(0, num_cols_units):
-                row_i_plus_kernel = kernel_shape_x + row_i
-                col_j_plus_kernel = kernel_shape_y + col_j
-                for f in xrange(0, num_out_feat_maps):
-                    # go through each unit of this layer
-                    for ifm in xrange(0, num_input_feature_maps):
-                        activations[f][row_i][col_j] += numpy.sum(
-                                ((inputs[ifm][0:, row_i: row_i_plus_kernel, col_j:col_j_plus_kernel] * weights[ifm][f][row_i][col_j])
-                                 + biases[ifm][f][row_i][col_j]
-                        ).reshape(num_batches, -1), axis=1)
+    for row_i in xrange(0, num_rows_units):
+        for col_j in xrange(0, num_cols_units):
+            row_i_plus_kernel = kernel_shape_x + row_i
+            col_j_plus_kernel = kernel_shape_y + col_j
+            for f in xrange(0, num_out_feat_maps):
+                # go through each unit of this layer
+                for ifm in xrange(0, num_input_feature_maps):
+                    # sum along axis b
+                    sum_along_b = numpy.sum(
+                            (inputs[ifm][0:, row_i: row_i_plus_kernel, col_j:col_j_plus_kernel]
+                             * weights[ifm][f]).reshape(num_batches, -1), axis=1)
+
+                    activations[f][row_i][col_j] += sum_along_b
+                activations[f][row_i][col_j] += biases[f]
     return numpy.rollaxis(activations, 3, 0)
 
 
 def convolution_bprop_fast(
-        numpy.ndarray[DTYPE_t, ndim=6] weights,
+        numpy.ndarray[DTYPE_t, ndim=4] weights,
         numpy.ndarray[DTYPE_t, ndim=4] deltas,
         unsigned int image_shape_x,
         unsigned int image_shape_y,
@@ -69,21 +66,22 @@ def convolution_bprop_fast(
     cdef unsigned int num_images = deltas.shape[0]
 
     cdef unsigned int num_out_feat_maps = weights.shape[1]
-    cdef unsigned int num_rows_units = weights.shape[2]
-    cdef unsigned int num_cols_units = weights.shape[3]
-    cdef unsigned int kernel_shape_x = weights.shape[4]
-    cdef unsigned int kernel_shape_y = weights.shape[5]
+    cdef unsigned int num_rows_units = deltas.shape[2]
+    cdef unsigned int num_cols_units = deltas.shape[3]
+    cdef unsigned int kernel_shape_x = weights.shape[2]
+    cdef unsigned int kernel_shape_y = weights.shape[3]
+
+    deltas = deltas.T
 
     cdef unsigned int inp_feature_map_f, row_u, col_u, kernel_row_end, kernel_col_end, out_feature_map_f
 
     cdef numpy.ndarray[DTYPE_t, ndim=4] ograds = numpy.zeros(
             (num_images, num_inp_feat_maps, image_shape_x, image_shape_y), dtype=numpy.float32)
 
-    deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas, 1, 0), 2, 1), 3, 2)
     ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
 
     # for each input feature map
-    for inp_feature_map_f in range(0, num_inp_feat_maps):
+    for ifm in range(0, num_inp_feat_maps):
         # for each row of units in this layer
         for row_u in range(0, num_rows_units):
             # for each col of units in this layer
@@ -91,9 +89,11 @@ def convolution_bprop_fast(
                 kernel_row_end = kernel_shape_x + row_u
                 kernel_col_end = kernel_shape_y + col_u
                 # for each feature map in this layer
-                for out_feature_map_f in range(0, num_out_feat_maps):
-                    ograds[inp_feature_map_f][row_u:kernel_row_end,
-                                    col_u:kernel_col_end][0:] += deltas[out_feature_map_f][row_u][col_u][0:]
+                for ofm in range(0, num_out_feat_maps):
+                    ograds[ifm][row_u:kernel_row_end, col_u:kernel_col_end, 0:] += (
+                        weights[ifm][ofm][:, :, None] * deltas[col_u][row_u][ofm][0:]
+                    )
+
     return numpy.rollaxis(ograds, 3, 0)
 
 
@@ -103,10 +103,10 @@ def convolution_pgrads_fast(
         numpy.ndarray[DTYPE_t, ndim=4] deltas):
     cdef unsigned int num_input_feature_maps = weights.shape[0]
     cdef unsigned int num_out_feat_maps = weights.shape[1]
-    cdef unsigned int num_rows_units = weights.shape[2]
-    cdef unsigned int num_cols_units = weights.shape[3]
-    cdef unsigned int kernel_shape_x = weights.shape[4]
-    cdef unsigned int kernel_shape_y = weights.shape[5]
+    cdef unsigned int num_rows_units = deltas.shape[2]
+    cdef unsigned int num_cols_units = deltas.shape[3]
+    cdef unsigned int kernel_shape_x = weights.shape[2]
+    cdef unsigned int kernel_shape_y = weights.shape[3]
 
     # set up deltas that be added to weight in the next step
     # i.e they have the same shape as weights
@@ -126,9 +126,7 @@ def convolution_pgrads_fast(
                 kernel_row_end = kernel_shape_x + row_u
                 kernel_col_end = kernel_shape_y + col_u
                 for ofm in range(0, num_out_feat_maps):
-                    unit_delta = deltas[ofm][row_u][col_u][0:]
-                    input_kernel = inputs[ifm][row_u:kernel_row_end, col_u:kernel_col_end][0:]
-                    grad = input_kernel * unit_delta
-                    sum_grad = numpy.sum(grad, axis=2)
-                    grad_W[ifm][ofm][row_u][col_u] += sum_grad
+                    grad_W[ifm][ofm] += numpy.sum((
+                        inputs[ifm][row_u:kernel_row_end, col_u:kernel_col_end][0:] * deltas[ofm][row_u][col_u][0:]
+                    ), axis=2)
     return grad_W

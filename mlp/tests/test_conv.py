@@ -677,9 +677,11 @@ class ConvLinearTestCase(TestCase):
         model.add_layer(Softmax(idim=432, odim=10))
 
         for x, t in train_dp:
-            # start = time.clock()
+            full_start = time.clock()
+            start = time.clock()
             y = model.fprop(x)
-            # stop = time.clock()
+            stop = time.clock()
+            print("batch fprop done in {}".format(stop - start))
             # compute the cost and grad of the cost w.r.t y
             cost = model.cost.cost(y, t)
             cost_grad = model.cost.grad(y, t)
@@ -687,8 +689,9 @@ class ConvLinearTestCase(TestCase):
             start = time.clock()
             model.bprop(cost_grad)
             stop = time.clock()
+            print("batch bprop done in {}".format(stop - start))
 
-            print("batch done in {}".format(stop - start))
+            print("batch done in {}".format(stop - full_start))
         self.assertTrue(True)
 
 
