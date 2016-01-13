@@ -34,7 +34,7 @@ class LayerTypeTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.113, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.1066, delta=0.005)
 
     def test_model_relu(self):
         """ Ensure that back prop works with pgrads """
@@ -56,4 +56,4 @@ class LayerTypeTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.336, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.1766, delta=0.005)

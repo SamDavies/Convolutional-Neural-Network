@@ -551,7 +551,7 @@ class ConvLinearTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.326, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.0766, delta=0.005)
 
     def test_model_bprop_max_pool(self):
         """ Ensure that back prop works with pgrads """
@@ -598,7 +598,7 @@ class ConvLinearTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.136, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.0966, delta=0.005)
 
     def test_model_bprop_3_feature_maps(self):
         """ Ensure that back prop works when the conv layer has 1 below it """
@@ -643,7 +643,7 @@ class ConvLinearTestCase(TestCase):
 
         tst_cost, tst_accuracy = optimiser.validate(model, test_dp)
 
-        self.assertAlmostEqual(tst_accuracy, 0.059, delta=0.005)
+        self.assertAlmostEqual(tst_accuracy, 0.12, delta=0.005)
 
     def test_model_fprop_fast(self):
         """ Ensure that back prop works when the conv layer has 1 below it """
