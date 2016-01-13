@@ -477,6 +477,8 @@ class ConvMaxPool2D(Layer):
         pool_shape_y = self.sudoW.shape[5]
         pool_flat_shape = pool_shape_x * pool_shape_y
 
+        deltas = deltas.T
+
         ograds = numpy.zeros((num_batches, num_feat_maps, num_rows_units * pool_shape_x, num_cols_units * pool_shape_y), dtype=numpy.float32)
 
         # deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas_square, 1, 0), 2, 1), 3, 2)
@@ -490,7 +492,7 @@ class ConvMaxPool2D(Layer):
                 col_j_plus_pool = pool_col_j + pool_shape_y
                 for f in xrange(0, num_feat_maps):
                     for image_i in xrange(0, num_batches):
-                        delta = deltas[image_i][f][row_i][col_j]
+                        delta = deltas[col_j][row_i][f][image_i]
                         w = self.sudoW[image_i][f][row_i][col_j].T
                         ograds[image_i][f][pool_row_i: row_i_plus_pool, pool_col_j: col_j_plus_pool] = w * delta
 
