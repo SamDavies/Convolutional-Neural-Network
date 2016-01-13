@@ -98,10 +98,10 @@ def convolution_bprop_fast(
 
 
 def convolution_pgrads_fast(
-        numpy.ndarray[DTYPE_t, ndim=6] weights,
+        numpy.ndarray[DTYPE_t, ndim=4] weights,
         numpy.ndarray[DTYPE_t, ndim=4] inputs,
         numpy.ndarray[DTYPE_t, ndim=4] deltas):
-    cdef unsigned int num_input_feature_maps = weights.shape[0]
+    cdef unsigned int num_input_feature_maps = inputs.shape[1]
     cdef unsigned int num_out_feat_maps = weights.shape[1]
     cdef unsigned int num_rows_units = deltas.shape[2]
     cdef unsigned int num_cols_units = deltas.shape[3]
@@ -110,8 +110,8 @@ def convolution_pgrads_fast(
 
     # set up deltas that be added to weight in the next step
     # i.e they have the same shape as weights
-    cdef numpy.ndarray[DTYPE_t, ndim=6] grad_W = numpy.zeros(
-            (weights.shape[0], weights.shape[1], weights.shape[2], weights.shape[3], weights.shape[4], weights.shape[5]), dtype=numpy.float32)
+    cdef numpy.ndarray[DTYPE_t, ndim=4] grad_W = numpy.zeros(
+            (weights.shape[0], weights.shape[1], weights.shape[2], weights.shape[3]), dtype=numpy.float32)
 
     deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas, 1, 0), 2, 1), 3, 2)
     inputs = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(inputs, 1, 0), 2, 1), 3, 2)
@@ -129,4 +129,5 @@ def convolution_pgrads_fast(
                     grad_W[ifm][ofm] += numpy.sum((
                         inputs[ifm][row_u:kernel_row_end, col_u:kernel_col_end][0:] * deltas[ofm][row_u][col_u][0:]
                     ), axis=2)
+
     return grad_W

@@ -441,8 +441,8 @@ class ConvMaxPool2D(Layer):
 
         ograds = numpy.zeros((num_batches, num_feat_maps, num_rows_units * pool_shape_x, num_cols_units * pool_shape_y), dtype=numpy.float32)
 
-        # deltas = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(deltas_square, 1, 0), 2, 1), 3, 2)
-        # ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
+        self.sudoW = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(self.sudoW, 1, 0), 2, 1), 3, 2), 4, 3), 5, 4)
+        ograds = numpy.rollaxis(numpy.rollaxis(numpy.rollaxis(ograds, 1, 0), 2, 1), 3, 2)
 
         for row_i in xrange(0, num_rows_units):
             for col_j in xrange(0, num_cols_units):
@@ -451,12 +451,12 @@ class ConvMaxPool2D(Layer):
                 row_i_plus_pool = pool_row_i + pool_shape_x
                 col_j_plus_pool = pool_col_j + pool_shape_y
                 for f in xrange(0, num_feat_maps):
-                    for image_i in xrange(0, num_batches):
-                        delta = deltas[col_j][row_i][f][image_i]
-                        w = self.sudoW[image_i][f][row_i][col_j].T
-                        ograds[image_i][f][pool_row_i: row_i_plus_pool, pool_col_j: col_j_plus_pool] = w * delta
+                    delta = deltas[col_j][row_i][f][0:]
+                    w = self.sudoW[f][row_i][col_j][:, :, :]
+                    ograds[f][pool_row_i: row_i_plus_pool, pool_col_j: col_j_plus_pool, 0:] = w * delta
 
-        # ograds = numpy.rollaxis(ograds, 3, 0)
+        self.sudoW = numpy.rollaxis(self.sudoW, 5, 0)
+        ograds = numpy.rollaxis(ograds, 3, 0)
         # flatten the image in ograds
         ograds_flat = ograds.reshape(igrads.shape[0], -1)
 
