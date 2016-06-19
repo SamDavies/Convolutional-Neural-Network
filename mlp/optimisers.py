@@ -5,10 +5,10 @@ import numpy
 import time
 import logging
 
-from mlp.layers import MLP
+from mlp.costs import MSECost, CECost
+from mlp.layers import MLP, Linear, Softmax
 from mlp.dataset import DataProvider
-from mlp.schedulers import LearningRateScheduler
-
+from mlp.schedulers import LearningRateScheduler, LearningRateFixed
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class Optimiser(object):
     def train(self, model, train_iter, valid_iter=None):
         raise NotImplementedError()
 
-    def validate(self, model, valid_iterator):
+    def validate(self, model, valid_iterator, l1_weight=0, l2_weight=0, is_autoencoder=False):
         assert isinstance(model, MLP), (
             "Expected model to be a subclass of 'mlp.layers.MLP'"
             " class but got %s " % type(model)
@@ -33,6 +33,8 @@ class Optimiser(object):
 
         acc_list, nll_list = [], []
         for x, t in valid_iterator:
+            if is_autoencoder:
+                t = x
             y = model.fprop(x)
             nll_list.append(model.cost.cost(y, t))
             acc_list.append(numpy.mean(self.classification_accuracy(y, t)))
@@ -40,7 +42,9 @@ class Optimiser(object):
         acc = numpy.mean(acc_list)
         nll = numpy.mean(nll_list)
 
-        return nll, acc
+        prior_costs = Optimiser.compute_prior_costs(model, l1_weight, l2_weight)
+
+        return nll + sum(prior_costs), acc
 
     @staticmethod
     def classification_accuracy(y, t):
@@ -56,9 +60,31 @@ class Optimiser(object):
         rval = numpy.equal(y_idx, t_idx)
         return rval
 
+    @staticmethod
+    def compute_prior_costs(model, l1_weight, l2_weight):
+        """
+        Computes the cost contributions coming from parameter-dependent only
+        regularisation penalties
+        """
+        assert isinstance(model, MLP), (
+            "Expected model to be a subclass of 'mlp.layers.MLP'"
+            " class but got %s " % type(model)
+        )
+
+        l1_cost, l2_cost = 0, 0
+        for i in xrange(0, len(model.layers)):
+            params = model.layers[i].get_params()
+            for param in params:
+                if l2_weight > 0:
+                    l2_cost += 0.5 * l2_weight * numpy.sum(param ** 2)
+                if l1_weight > 0:
+                    l1_cost += l1_weight * numpy.sum(numpy.abs(param))
+
+        return l1_cost, l2_cost
+
 
 class SGDOptimiser(Optimiser):
-    def __init__(self, lr_scheduler):
+    def __init__(self, lr_scheduler, dp_scheduler=None, l1_weight=0.0, l2_weight=0.0):
         super(SGDOptimiser, self).__init__()
 
         assert isinstance(lr_scheduler, LearningRateScheduler), (
@@ -67,6 +93,9 @@ class SGDOptimiser(Optimiser):
         )
 
         self.lr_scheduler = lr_scheduler
+        self.dp_scheduler = dp_scheduler
+        self.l1_weight = l1_weight
+        self.l2_weight = l2_weight
 
     def train_epoch(self, model, train_iterator, learning_rate):
 
@@ -79,25 +108,35 @@ class SGDOptimiser(Optimiser):
             " class but got %s " % type(train_iterator)
         )
 
+        if self.dp_scheduler is not None:
+            self.dp_scheduler.get_next_rate()
+
         acc_list, nll_list = [], []
         for x, t in train_iterator:
+
             # get the prediction
-            y = model.fprop(x)
+            if self.dp_scheduler is not None:
+                y = model.fprop_dropout(x, self.dp_scheduler)
+            else:
+                y = model.fprop(x)
 
             # compute the cost and grad of the cost w.r.t y
             cost = model.cost.cost(y, t)
             cost_grad = model.cost.grad(y, t)
 
             # do backward pass through the model
-            model.bprop(cost_grad)
+            model.bprop(cost_grad, self.dp_scheduler)
 
-            #update the model, here we iterate over layers
-            #and then over each parameter in the layer
+            # update the model, here we iterate over layers
+            # and then over each parameter in the layer
             effective_learning_rate = learning_rate / x.shape[0]
 
             for i in xrange(0, len(model.layers)):
                 params = model.layers[i].get_params()
-                grads = model.layers[i].pgrads(model.activations[i], model.deltas[i + 1])
+                grads = model.layers[i].pgrads(inputs=model.activations[i],
+                                               deltas=model.deltas[i + 1],
+                                               l1_weight=self.l1_weight,
+                                               l2_weight=self.l2_weight)
                 uparams = []
                 for param, grad in zip(params, grads):
                     param = param - effective_learning_rate * grad
@@ -107,7 +146,11 @@ class SGDOptimiser(Optimiser):
             nll_list.append(cost)
             acc_list.append(numpy.mean(self.classification_accuracy(y, t)))
 
-        return numpy.mean(nll_list), numpy.mean(acc_list)
+        # compute the prior penalties contribution (parameter dependent only)
+        prior_costs = Optimiser.compute_prior_costs(model, self.l1_weight, self.l2_weight)
+        training_cost = numpy.mean(nll_list) + sum(prior_costs)
+
+        return training_cost, numpy.mean(acc_list)
 
     def train(self, model, train_iterator, valid_iterator=None):
 
@@ -116,15 +159,16 @@ class SGDOptimiser(Optimiser):
         tr_stats, valid_stats = [], []
 
         # do the initial validation
-        tr_nll, tr_acc = self.validate(model, train_iterator)
-        logger.info('Epoch %i: Training cost (%s) for random model is %.3f. Accuracy is %.2f%%'
+        train_iterator.reset()
+        tr_nll, tr_acc = self.validate(model, train_iterator, self.l1_weight, self.l2_weight)
+        logger.info('Epoch %i: Training cost (%s) for initial model is %.3f. Accuracy is %.2f%%'
                     % (self.lr_scheduler.epoch, cost_name, tr_nll, tr_acc * 100.))
         tr_stats.append((tr_nll, tr_acc))
 
         if valid_iterator is not None:
             valid_iterator.reset()
-            valid_nll, valid_acc = self.validate(model, valid_iterator)
-            logger.info('Epoch %i: Validation cost (%s) for random model is %.3f. Accuracy is %.2f%%'
+            valid_nll, valid_acc = self.validate(model, valid_iterator, self.l1_weight, self.l2_weight)
+            logger.info('Epoch %i: Validation cost (%s) for initial model is %.3f. Accuracy is %.2f%%'
                         % (self.lr_scheduler.epoch, cost_name, valid_nll, valid_acc * 100.))
             valid_stats.append((valid_nll, valid_acc))
 
@@ -144,7 +188,7 @@ class SGDOptimiser(Optimiser):
             vstart = time.clock()
             if valid_iterator is not None:
                 valid_iterator.reset()
-                valid_nll, valid_acc = self.validate(model, valid_iterator)
+                valid_nll, valid_acc = self.validate(model, valid_iterator, self.l1_weight, self.l2_weight)
                 logger.info('Epoch %i: Validation cost (%s) is %.3f. Accuracy is %.2f%%'
                             % (self.lr_scheduler.epoch + 1, cost_name, valid_nll, valid_acc * 100.))
                 self.lr_scheduler.get_next_rate(valid_acc)
@@ -153,10 +197,10 @@ class SGDOptimiser(Optimiser):
                 self.lr_scheduler.get_next_rate(None)
             vstop = time.clock()
 
-            train_speed = train_iterator.num_examples() / (tstop - tstart)
-            valid_speed = valid_iterator.num_examples() / (vstop - vstart)
+            train_speed = train_iterator.num_examples_presented() / (tstop - tstart)
+            valid_speed = valid_iterator.num_examples_presented() / (vstop - vstart)
             tot_time = vstop - tstart
-            #pps = presentations per second
+            # pps = presentations per second
             logger.info("Epoch %i: Took %.0f seconds. Training speed %.0f pps. "
                         "Validation speed %.0f pps."
                         % (self.lr_scheduler.epoch, tot_time, train_speed, valid_speed))
@@ -168,3 +212,285 @@ class SGDOptimiser(Optimiser):
             converged = (self.lr_scheduler.get_rate() == 0)
 
         return tr_stats, valid_stats
+
+
+class AutoEncoder(Optimiser):
+    def __init__(self, learning_rate, max_epochs):
+        self.learning_rate = learning_rate
+        self.max_epochs = max_epochs
+        # the cost is always mean squared error
+        self.cost = MSECost()
+
+    def pretrain(self, model, train_iter):
+        auto_encoder_inputs = []
+
+        for x, t in train_iter:
+            auto_encoder_inputs.append(x)
+
+        for i in xrange(0, len(model.layers) - 1):
+            self.pre_train_layer(model, i, auto_encoder_inputs)
+
+            auto_encoder_2 = MLP(self.cost)
+            auto_encoder_2.add_layer(model.layers[i])
+
+            auto_encoder_outputs = []
+            for the_input in auto_encoder_inputs:
+                the_output = auto_encoder_2.fprop(the_input)
+                auto_encoder_outputs.append(the_output)
+
+            # set this layer as the input to the next layer
+            auto_encoder_inputs = auto_encoder_outputs
+
+        self.pre_train_output(model, train_iter)
+
+    def pre_train_layer(self, model, i, train_data):
+        """
+        Pre train the given layer of the model
+        :param model: the model to pre train
+        :param i: the index of the layer to pre train in the model
+        :param train_data: the data to train from
+        :return: nothing
+        """
+        auto_encoder = MLP(self.cost)
+        auto_encoder.add_layer(model.layers[i])
+        auto_encoder.add_layer(Linear(idim=model.layers[i].odim, odim=model.layers[i].idim))
+
+        auto_encoder_scheduler = LearningRateFixed(learning_rate=self.learning_rate, max_epochs=self.max_epochs)
+        converged = False
+        tr_stats = []
+        while not converged:
+            tr_nll, tr_acc = self.pretrain_epoch(model=auto_encoder, train_data=train_data,
+                                                 learning_rate=auto_encoder_scheduler.get_rate())
+
+            tr_stats.append((tr_nll, tr_acc))
+
+            logger.info('Epoch %i: Pre-training cost (%s) is %.3f. Accuracy is %.2f%%'
+                        % (auto_encoder_scheduler.epoch + 1, self.cost.get_name(), tr_nll, tr_acc * 100.))
+
+            auto_encoder_scheduler.get_next_rate(None)
+            converged = (auto_encoder_scheduler.get_rate() == 0)
+
+    def pretrain_epoch(self, model, train_data, learning_rate):
+        assert isinstance(model, MLP), (
+            "Expected model to be a subclass of 'mlp.layers.MLP'"
+            " class but got %s " % type(model)
+        )
+
+        acc_list, nll_list = [], []
+        for x in train_data:
+
+            inputs = self.add_noise(x)
+
+            # get the prediction
+            y = model.fprop(inputs)
+
+            # compute the cost and grad of the cost w.r.t y
+            cost = model.cost.cost(y, x)
+            cost_grad = model.cost.grad(y, x)
+
+            # do backward pass through the model
+            model.bprop(cost_grad)
+
+            # update the model, here we iterate over layers
+            # and then over each parameter in the layer
+            effective_learning_rate = learning_rate / x.shape[0]
+
+            for i in xrange(0, len(model.layers)):
+                params = model.layers[i].get_params()
+                grads = model.layers[i].pgrads(inputs=model.activations[i],
+                                               deltas=model.deltas[i + 1],
+                                               l1_weight=0.0,
+                                               l2_weight=0.0)
+                uparams = []
+                for param, grad in zip(params, grads):
+                    param = param - effective_learning_rate * grad
+                    uparams.append(param)
+                model.layers[i].set_params(uparams)
+
+            nll_list.append(cost)
+            acc_list.append(numpy.mean(self.classification_accuracy(y, x)))
+
+        # compute the prior penalties contribution (parameter dependent only)
+        prior_costs = Optimiser.compute_prior_costs(model, 0.0, 0.0)
+        training_cost = numpy.mean(nll_list) + sum(prior_costs)
+
+        return training_cost, numpy.mean(acc_list)
+
+    def add_noise(self, x):
+        return x
+
+    def pre_train_output(self, model, train_iter):
+        """
+        Pre train only the output layer
+        :return:
+        """
+        ouput_scheduler = LearningRateFixed(learning_rate=self.learning_rate, max_epochs=self.max_epochs)
+        converged = False
+        tr_stats = []
+        while not converged:
+            train_iter.reset()
+            tr_nll, tr_acc = self.pre_train_output_epoch(model=model, train_iterator=train_iter,
+                                                         learning_rate=ouput_scheduler.get_rate())
+
+            tr_stats.append((tr_nll, tr_acc))
+
+            logger.info('Epoch %i: Pre-training cost (%s) is %.3f. Accuracy is %.2f%%'
+                        % (ouput_scheduler.epoch + 1, self.cost.get_name(), tr_nll, tr_acc * 100.))
+
+            ouput_scheduler.get_next_rate(None)
+            converged = (ouput_scheduler.get_rate() == 0)
+
+    def pre_train_output_epoch(self, model, train_iterator, learning_rate):
+        assert isinstance(model, MLP), (
+            "Expected model to be a subclass of 'mlp.layers.MLP'"
+            " class but got %s " % type(model)
+        )
+        assert isinstance(train_iterator, DataProvider), (
+            "Expected iterator to be a subclass of 'mlp.dataset.DataProvider'"
+            " class but got %s " % type(train_iterator)
+        )
+
+        acc_list, nll_list = [], []
+        for x, t in train_iterator:
+
+            y = model.fprop(x)
+
+            # compute the cost and grad of the cost w.r.t y
+            cost = model.cost.cost(y, t)
+            cost_grad = model.cost.grad(y, t)
+
+            # do backward pass through the model
+            model.bprop(cost_grad)
+
+            # update the model, here we iterate over layers
+            # and then over each parameter in the layer
+            effective_learning_rate = learning_rate / x.shape[0]
+
+            # only update the output layer' weights
+            i = len(model.layers)-1
+            params = model.layers[i].get_params()
+            grads = model.layers[i].pgrads(inputs=model.activations[i],
+                                           deltas=model.deltas[i + 1],
+                                           l1_weight=0.0,
+                                           l2_weight=0.0)
+            uparams = []
+            for param, grad in zip(params, grads):
+                param = param - effective_learning_rate * grad
+                uparams.append(param)
+            model.layers[i].set_params(uparams)
+
+            nll_list.append(cost)
+            acc_list.append(numpy.mean(self.classification_accuracy(y, t)))
+
+        # compute the prior penalties contribution (parameter dependent only)
+        prior_costs = Optimiser.compute_prior_costs(model, 0.0, 0.0)
+        training_cost = numpy.mean(nll_list) + sum(prior_costs)
+
+        return training_cost, numpy.mean(acc_list)
+
+
+class CrossEntropy(Optimiser):
+    def __init__(self, learning_rate, max_epochs):
+        self.learning_rate = learning_rate
+        self.max_epochs = max_epochs
+        # the cost is always mean squared error
+        self.cost = CECost()
+
+    def pretrain(self, model, train_iter):
+        for i in xrange(0, len(model.layers) - 1):
+            self.pre_train_layer(model, i, train_iter)
+
+    def pre_train_layer(self, model, i, train_iterator):
+        """
+        Pre train the given layer of the model
+        :param model: the model to pre train
+        :param i: the index of the layer to pre train in the model
+        :param train_iterator: the data to train from
+        :return: nothing
+        """
+        cross_entropy = MLP(self.cost)
+        for j in xrange(0, i+1):
+            cross_entropy.add_layer(model.layers[j])
+        cross_entropy.add_layer(Softmax(idim=model.layers[i].odim, odim=model.layers[-1].odim))
+        # cross_entropy.add_layer(model.layers[-1])
+
+        cross_entropy_scheduler = LearningRateFixed(learning_rate=self.learning_rate, max_epochs=self.max_epochs)
+        converged = False
+        tr_stats = []
+        while not converged:
+            train_iterator.reset()
+            tr_nll, tr_acc = self.pretrain_epoch(model=cross_entropy, train_iterator=train_iterator, layer_index=i,
+                                                 learning_rate=cross_entropy_scheduler.get_rate())
+
+            tr_stats.append((tr_nll, tr_acc))
+
+            logger.info('Epoch %i: Pre-training cost (%s) is %.3f. Accuracy is %.2f%%'
+                        % (cross_entropy_scheduler.epoch + 1, self.cost.get_name(), tr_nll, tr_acc * 100.))
+
+            cross_entropy_scheduler.get_next_rate(None)
+            converged = (cross_entropy_scheduler.get_rate() == 0)
+
+    def pretrain_epoch(self, model, train_iterator, layer_index, learning_rate):
+        """
+        :param model:
+        :param train_iterator:
+        :param layer_index: the index of the layer to train
+        :param learning_rate:
+        :return:
+        """
+        assert isinstance(model, MLP), (
+            "Expected model to be a subclass of 'mlp.layers.MLP'"
+            " class but got %s " % type(model)
+        )
+        assert isinstance(train_iterator, DataProvider), (
+            "Expected iterator to be a subclass of 'mlp.dataset.DataProvider'"
+            " class but got %s " % type(train_iterator)
+        )
+
+        acc_list, nll_list = [], []
+        for x, t in train_iterator:
+
+            y = model.fprop(x)
+
+            # compute the cost and grad of the cost w.r.t y
+            cost = model.cost.cost(y, t)
+            cost_grad = model.cost.grad(y, t)
+
+            # do backward pass through the model
+            model.bprop(cost_grad)
+
+            # update the model, here we iterate over layers
+            # and then over each parameter in the layer
+            effective_learning_rate = learning_rate / x.shape[0]
+
+            # don't train layers lower than this
+            for i in xrange(layer_index, len(model.layers)):
+                params = model.layers[i].get_params()
+                grads = model.layers[i].pgrads(inputs=model.activations[i],
+                                               deltas=model.deltas[i + 1],
+                                               l1_weight=0.0,
+                                               l2_weight=0.0)
+                uparams = []
+                for param, grad in zip(params, grads):
+                    param = param - effective_learning_rate * grad
+                    uparams.append(param)
+                model.layers[i].set_params(uparams)
+
+            nll_list.append(cost)
+            acc_list.append(numpy.mean(self.classification_accuracy(y, t)))
+
+        # compute the prior penalties contribution (parameter dependent only)
+        prior_costs = Optimiser.compute_prior_costs(model, 0.0, 0.0)
+        training_cost = numpy.mean(nll_list) + sum(prior_costs)
+
+        return training_cost, numpy.mean(acc_list)
+
+
+class DenoisingAutoEncoder(AutoEncoder):
+    def __init__(self, learning_rate, max_epochs, noise, rng):
+        super(DenoisingAutoEncoder, self).__init__(learning_rate, max_epochs)
+        self.noise = noise
+        self.rng = rng
+
+    def add_noise(self, x):
+        return self.noise.apply_noise(x, self.rng)

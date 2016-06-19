@@ -17,7 +17,7 @@ class DataProvider(object):
     Data provider defines an interface for our
     generic data-independent readers.
     """
-    def __init__(self, batch_size, randomize=True):
+    def __init__(self, batch_size, randomize=True, rng=None):
         """
         :param batch_size: int, specifies the number
                of elements returned at each step
@@ -29,6 +29,11 @@ class DataProvider(object):
         self.batch_size = batch_size
         self.randomize = randomize
         self._curr_idx = 0
+        self.rng = rng
+
+        if self.rng is None:
+            seed=[2015, 10, 1]
+            self.rng = numpy.random.RandomState(seed)
 
     def reset(self):
         """
@@ -77,10 +82,12 @@ class MNISTDataProvider(DataProvider):
                  batch_size=10,
                  max_num_batches=-1,
                  max_num_examples=-1,
-                 randomize=True):
+                 randomize=True,
+                 rng=None,
+                 conv_reshape=False):
 
         super(MNISTDataProvider, self).\
-            __init__(batch_size, randomize)
+            __init__(batch_size, randomize, rng)
 
         assert dset in ['train', 'valid', 'eval'], (
             "Expected dset to be either 'train', "
@@ -113,6 +120,7 @@ class MNISTDataProvider(DataProvider):
         self.x = x
         self.t = t
         self.num_classes = 10
+        self.conv_reshape = conv_reshape
 
         self._rand_idx = None
         if self.randomize:
@@ -125,7 +133,16 @@ class MNISTDataProvider(DataProvider):
 
     def __randomize(self):
         assert isinstance(self.x, numpy.ndarray)
-        return numpy.random.permutation(numpy.arange(0, self.x.shape[0]))
+
+        if self._rand_idx is not None and self._max_num_batches > 0:
+            return self.rng.permutation(self._rand_idx)
+        else:
+            #the max_to_present secures that random examples
+            #are returned from the same pool each time (in case
+            #the total num of examples was limited by max_num_batches)
+            max_to_present = self.batch_size*self._max_num_batches \
+                                if self._max_num_batches > 0 else self.x.shape[0]
+            return self.rng.permutation(numpy.arange(0, self.x.shape[0]))[0:max_to_present]
 
     def next(self):
 
@@ -147,16 +164,38 @@ class MNISTDataProvider(DataProvider):
 
         self._curr_idx += self.batch_size
 
+        if self.conv_reshape:
+            rval_x = rval_x.reshape(self.batch_size, 1, 28, 28)
+
         return rval_x, self.__to_one_of_k(rval_t)
 
     def num_examples(self):
         return self.x.shape[0]
+
+    def num_examples_presented(self):
+        return self._curr_idx + 1
 
     def __to_one_of_k(self, y):
         rval = numpy.zeros((y.shape[0], self.num_classes), dtype=numpy.float32)
         for i in xrange(y.shape[0]):
             rval[i, y[i]] = 1
         return rval
+
+
+def add_batch(data_provider, batch):
+    x, t = batch
+    x = numpy.array(x)
+    t = numpy.array(t)
+    assert len(x) == data_provider.batch_size, (
+        "The size of the batch you are trying to add is different from the batch size")
+    data_provider._max_num_batches += 1
+    data_provider.x = numpy.append(data_provider.x, x, axis=0)
+    data_provider.t = numpy.append(data_provider.t, t, axis=0)
+
+
+def add_batches(data_provider, batches):
+    for batch in batches:
+        add_batch(data_provider, batch)
 
 
 class MetOfficeDataProvider(DataProvider):
